@@ -45,6 +45,7 @@ class Interface(object):
 
         self.freqHLayout_1 = QtGui.QHBoxLayout()
         self.freqHLayout_1.setObjectName(_fromUtf8("freqHLayout_1"))
+        self.freqVLayout_1.addLayout(self.freqHLayout_1)
 
         # Start frequency setting
         self.startLayout = QtGui.QFormLayout()
@@ -57,6 +58,7 @@ class Interface(object):
         self.startEdit.setObjectName(_fromUtf8("startEdit"))
         self.startEdit.setDecimals(2)
         self.startEdit.setRange(1e6, 1280e6)
+        self.startEdit.setSingleStep(1e5)
         self.startEdit.setKeyboardTracking(False)
         self.startLayout.setWidget(0, QtGui.QFormLayout.FieldRole, self.startEdit)
         self.freqHLayout_1.addLayout(self.startLayout)
@@ -72,11 +74,38 @@ class Interface(object):
         self.stopEdit.setObjectName(_fromUtf8("stopEdit"))
         self.stopEdit.setDecimals(2)
         self.stopEdit.setRange(1e6, 1280e6)
+        self.stopEdit.setSingleStep(1e5)
         self.stopEdit.setKeyboardTracking(False)
         self.stopLayout.setWidget(0, QtGui.QFormLayout.FieldRole, self.stopEdit)
         self.freqHLayout_1.addLayout(self.stopLayout)
 
-        self.freqVLayout_1.addLayout(self.freqHLayout_1)
+        # RBW setting
+        self.rbwLayout = QtGui.QFormLayout()
+        self.rbwLayout.setObjectName(_fromUtf8("rbwLayout"))
+        self.rbwLabel = QtGui.QLabel(self.freqBox)
+        self.rbwLabel.setObjectName(_fromUtf8("rbwLabel"))
+        self.rbwLayout.setWidget(0, QtGui.QFormLayout.LabelRole, self.rbwLabel)
+
+        self.rbwEdit = pg.ComboBox(self.freqBox)
+        self.rbwEdit.setObjectName(_fromUtf8("rbwEdit"))
+        self.rbwEdit.addItem('0,21 kHz', 16384)
+        self.rbwEdit.addItem('0,42 kHz', 8192)
+        self.rbwEdit.addItem('0,84 kHz', 4096)
+        self.rbwEdit.addItem('1,69 kHz', 2048)
+        self.rbwEdit.addItem('3,38 kHz', 1024)
+        self.rbwEdit.addItem('6,75 kHz', 512)
+        self.rbwEdit.addItem('13,5 kHz', 256)
+        self.rbwEdit.addItem('27 kHz', 128)
+        self.rbwEdit.addItem('54 kHz', 64)
+        self.rbwEdit.addItem('108 kHz', 32)
+        self.rbwEdit.addItem('216 kHz', 16)
+        self.rbwEdit.addItem('432 kHz', 8)
+        self.rbwEdit.setCurrentIndex(4)
+        self.rbwLayout.setWidget(0, QtGui.QFormLayout.FieldRole, self.rbwEdit)
+        self.freqHLayout_1.addLayout(self.rbwLayout)
+
+        spacerItem = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
+        self.freqHLayout_1.addItem(spacerItem)
 
         self.verticalLayout_1.addWidget(self.freqBox)
         self.horizontalLayout_1.addLayout(self.verticalLayout_1)
@@ -88,7 +117,17 @@ class Interface(object):
         self.settingsVLayout_1 = QtGui.QVBoxLayout(self.settingsBox)
         self.settingsVLayout_1.setObjectName(_fromUtf8("settingsVLayout_1"))
 
+        # Start button
+        self.settingsHLayout_1 = QtGui.QHBoxLayout()
+        self.startButton = QtGui.QPushButton()
+        self.startButton.setText('START')
+        self.settingsHLayout_1.addWidget(self.startButton)
 
+        # Stop button
+        self.stopButton = QtGui.QPushButton()
+        self.stopButton.setText('STOP')
+        self.settingsHLayout_1.addWidget(self.stopButton)
+        self.settingsVLayout_1.addLayout(self.settingsHLayout_1)
 
         self.horizontalLayout_1.addWidget(self.settingsBox)
 
@@ -114,8 +153,8 @@ class Interface(object):
         self.plotBox.setTitle(_translate("MainWindow", "Spectrum", None))
         self.startLabel.setText(_translate("MainWindow", "START:", None))
         self.stopLabel.setText(_translate("MainWindow", "STOP:", None))
-        # self.label_3.setText(_translate("MainWindow", "RBW:", None))
-        # self.settingsBox.setTitle(_translate("MainWindow", "Ustawienia", None))
+        self.rbwLabel.setText(_translate("MainWindow", "RBW:", None))
+        self.settingsBox.setTitle(_translate("MainWindow", "Settings", None))
         # self.gainLabel.setText(_translate("MainWindow", "Gain:", None))
         # self.refLabel.setText(_translate("MainWindow", "REF:", None))
         # self.holdLabel.setText(_translate("MainWindow", "Max HOLD:", None))
