@@ -12,6 +12,15 @@ class Analyzer(QtGui.QMainWindow):
     def __init__(self, parent=None):
         QtGui.QWidget.__init__(self, parent)
 
+        ### MODE FLAGS ###
+        self.HF = False
+
+        ### VARIABLES ###
+        self.startFreq = 80e6
+        self.stopFreq = 100e6
+
+        self.waterfallHistorySize = 100
+
         self.ui = Interface()
         self.ui.setupUi(self)
 
@@ -20,14 +29,21 @@ class Analyzer(QtGui.QMainWindow):
 ### PLOT FUNCTIONS ###
     def createPlot(self):
         self.plot = pg.PlotWidget()
-        self.ui.plotLayout.addWidget(self.plot)
+        if self.HF == False:
+            self.ui.plotLayout.addWidget(self.plot)
+        else:
+            self.ui.plotLayout_2.addWidget(self.plot)
         self.plot.showGrid(x=True, y=True)
         self.plot.setYRange(0, 100)
+        self.plot.setXRange(self.startFreq/1e6, self.stopFreq/1e6)
         self.curve = self.plot.plot(pen='y')
 
     def createWaterfall(self):
         self.waterfallPlot = pg.PlotWidget()
-        self.ui.plotLayout.addWidget(self.waterfallPlot)
+        if self.HF == False:
+            self.ui.plotLayout.addWidget(self.waterfallPlot)
+        else:
+            self.ui.plotLayout_2.addWidget(self.waterfallPlot)
         self.waterfallPlot.setYRange(-self.waterfallHistorySize, 0)
         self.waterfallPlot.setXLink(self.plot)
 
