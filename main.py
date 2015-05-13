@@ -117,7 +117,9 @@ class Analyzer(QtGui.QMainWindow):
             self.ui.plotLayout.removeWidget(self.waterfallPlot)
             self.waterfallPlot.deleteLater()
             self.waterfallPlot = None
+            self.waterfallImg.deleteLater()
             self.waterfallImg = None
+            self.waterfallHistogram.deleteLater()
             self.waterfallHistogram = None
 
 # Start Qt event loop unless running in interactive mode or using pyside.
