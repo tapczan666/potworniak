@@ -16,6 +16,7 @@ class Analyzer(QtGui.QMainWindow):
 
         ### MODE FLAGS ###
         self.HF = False
+        self.WATERFALL = False
 
         ### VARIABLES ###
         self.startFreq = 80e6
@@ -31,6 +32,7 @@ class Analyzer(QtGui.QMainWindow):
         ### SIGNALS AND SLOTS ###
         self.ui.startButton.clicked.connect(self.onStart)
         self.ui.stopButton.clicked.connect(self.onStop)
+        self.ui.waterfallCheck.stateChanged.connect(self.onWaterfall)
 
 ### PLOT FUNCTIONS ###
     def createPlot(self):
@@ -104,6 +106,19 @@ class Analyzer(QtGui.QMainWindow):
     @pyqtSlot(object)
     def onError(self, errorMsg):
         self.ui.statusbar.addWidget(QtGui.QLabel(errorMsg))
+
+    @pyqtSlot(int)
+    def onWaterfall(self, state):
+        if state ==2:
+            self.WATERFALL = True
+            self.createWaterfall()
+        elif state == 0:
+            self.WATERFALL = False
+            self.ui.plotLayout.removeWidget(self.waterfallPlot)
+            self.waterfallPlot.deleteLater()
+            self.waterfallPlot = None
+            self.waterfallImg = None
+            self.waterfallHistogram = None
 
 # Start Qt event loop unless running in interactive mode or using pyside.
 if __name__ == '__main__':
