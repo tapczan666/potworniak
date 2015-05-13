@@ -36,15 +36,15 @@ class Interface(object):
         self.plotTabs = QtGui.QTabWidget(self.centralWidget)
         self.verticalLayout_1.addWidget(self.plotTabs)
 
-        self.plotBox = QtGui.QGroupBox()
-        self.plotBox.setObjectName(_fromUtf8("plotBox"))
-        self.plotLayout = QtGui.QVBoxLayout(self.plotBox)
-        self.plotTabs.addTab(self.plotBox, "Wideband")
+        self.plotTab_1 = QtGui.QWidget()
+        self.plotTab_1.setObjectName(_fromUtf8("plotBox"))
+        self.plotLayout = QtGui.QVBoxLayout(self.plotTab_1)
+        self.plotTabs.addTab(self.plotTab_1, "Wideband")
 
-        self.plotBox_2 = QtGui.QGroupBox()
-        self.plotBox_2.setObjectName(_fromUtf8("plotBox_2"))
-        self.plotLayout_2 = QtGui.QVBoxLayout(self.plotBox_2)
-        self.plotTabs.addTab(self.plotBox_2, "HF")
+        self.plotTab_2 = QtGui.QWidget()
+        self.plotTab_2.setObjectName(_fromUtf8("plotBox_2"))
+        self.plotLayout_2 = QtGui.QVBoxLayout(self.plotTab_2)
+        self.plotTabs.addTab(self.plotTab_2, "HF")
 
     ### FREQ SETTINGS LAYOUT ###
         self.freqBox = QtGui.QGroupBox(self.centralWidget)
@@ -187,6 +187,23 @@ class Interface(object):
         # Traces
         self.tab_2 = QtGui.QWidget()
         self.settingsTabs.addTab(self.tab_2, "Traces")
+
+        self.traceLayout = QtGui.QVBoxLayout()
+        self.traceButton_1 = QtGui.QPushButton(self.settingsBox)
+        self.traceButton_1.setText("Save trace 1")
+        self.traceLayout.addWidget(self.traceButton_1)
+
+        self.traceButton_2 = QtGui.QPushButton(self.settingsBox)
+        self.traceButton_2.setText("Save trace 2")
+        self.traceLayout.addWidget(self.traceButton_2)
+
+        self.traceButton_3 = QtGui.QPushButton(self.settingsBox)
+        self.traceButton_3.setText("Save trace 3")
+        self.traceLayout.addWidget(self.traceButton_3)
+
+        self.traces = [self.traceButton_1, self.traceButton_2, self.traceButton_3]
+
+        self.tab_2.setLayout(self.traceLayout)
 
         # Markers
         self.tab_3 = QtGui.QWidget()

@@ -5,6 +5,8 @@ import pyqtgraph as pg
 from ui import Interface
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import pyqtSlot
+from sampler import Sampler
+from worker import Worker
 
 app = QtGui.QApplication([])
 
@@ -25,6 +27,10 @@ class Analyzer(QtGui.QMainWindow):
         self.ui.setupUi(self)
 
         self.createPlot()
+
+        ### SIGNALS AND SLOTS ###
+        self.ui.startButton.clicked.connect(self.onStart)
+        self.ui.stopButton.clicked.connect(self.onStop)
 
 ### PLOT FUNCTIONS ###
     def createPlot(self):
@@ -52,18 +58,52 @@ class Analyzer(QtGui.QMainWindow):
 
         self.waterfallImg = None
 
+### SETUP SAMPLER AND WORKER
+    def setupSampler(self):
+        self.samplerThread = QtCore.QThread(self)
+        self.sampler = Sampler(self.gain, self.samp_rate, self.freqs, self.num_samples)
+        self.sampler.moveToThread(self.samplerThread)
+        self.samplerThread.started.connect(self.sampler.sampling)
+        self.sampler.samplerError.connect(self.onError)
+        #self.ui.gainSlider.valueChanged[int].connect(self.setGain)
+        #self.ui.gainSlider.valueChanged[int].connect(self.sampler.changeGain, QtCore.Qt.QueuedConnection)
+        self.samplerThread.start(QtCore.QThread.NormalPriority)
+
+    def setupWorker(self):
+        self.workerThread = QtCore.QThread(self)
+        self.worker = Worker(self.nfft, self.length, self.slice_length, self.samp_rate)
+        self.worker.moveToThread(self.workerThread)
+        self.workerThread.started.connect(self.worker.working)
+        #self.worker.abort.connect(self.onAbort)
+        self.workerThread.start(QtCore.QThread.NormalPriority)
+
+
 ### GUI FUNCTIONS ###
     @pyqtSlot()
     def onStart(self):
-        pass
+        self.ui.startButton.setEnabled(False)
+        self.ui.stopButton.setEnabled(True)
+
+        self.setupWorker()
+        self.setupSampler()
 
     @pyqtSlot()
     def onStop(self):
-        pass
+        self.ui.startButton.setEnabled(True)
+        self.ui.stopButton.setEnabled(False)
+
+        self.samplerThread.exit(0)
+        self.sampler = None
+        self.workerThread.exit(0)
+        self.worker = None
 
     @pyqtSlot()
     def onRbw(self):
         pass
+
+    @pyqtSlot(object)
+    def onError(self, errorMsg):
+        self.ui.statusbar.addWidget(QtGui.QLabel(errorMsg))
 
 # Start Qt event loop unless running in interactive mode or using pyside.
 if __name__ == '__main__':
