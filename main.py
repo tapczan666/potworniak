@@ -21,6 +21,8 @@ class Analyzer(QtGui.QMainWindow):
         ### VARIABLES ###
         self.startFreq = 80e6
         self.stopFreq = 100e6
+        self.span = self.stopFreq - self.startFreq
+        self.center = self.startFreq + self.span/2
 
         self.waterfallHistorySize = 100
 
@@ -32,6 +34,7 @@ class Analyzer(QtGui.QMainWindow):
         ### SIGNALS AND SLOTS ###
         self.ui.startButton.clicked.connect(self.onStart)
         self.ui.stopButton.clicked.connect(self.onStop)
+        self.ui.startEdit.sigValueChanged.connect(self.onStartFreq)
         self.ui.waterfallCheck.stateChanged.connect(self.onWaterfall)
 
 ### PLOT FUNCTIONS ###
@@ -42,6 +45,7 @@ class Analyzer(QtGui.QMainWindow):
         else:
             self.ui.plotLayout_2.addWidget(self.plot)
         self.plot.showGrid(x=True, y=True)
+        self.plot.setMouseEnabled(x=False, y=False)
         self.plot.setYRange(0, 100)
         self.plot.setXRange(self.startFreq/1e6, self.stopFreq/1e6)
         self.curve = self.plot.plot(pen='y')
@@ -54,12 +58,43 @@ class Analyzer(QtGui.QMainWindow):
             self.ui.plotLayout_2.addWidget(self.waterfallPlot)
         self.waterfallPlot.setYRange(-self.waterfallHistorySize, 0)
         self.waterfallPlot.setXLink(self.plot)
+        self.waterfallPlot.setMouseEnabled(x=False, y=False)
 
         self.waterfallHistogram = pg.HistogramLUTItem()
         self.waterfallHistogram.gradient.loadPreset("flame")
 
         self.waterfallImg = None
 
+    def updateFreqs(self):
+        #self.freqs = np.arange(self.startFreq+self.step/2, self.stopFreq+self.step/2, self.step)
+        self.plot.setXRange(self.startFreq/1e6, self.stopFreq/1e6)
+        self.ui.startEdit.setValue(self.startFreq/1e6)
+        self.ui.stopEdit.setValue(self.stopFreq/1e6)
+        self.ui.centerEdit.setValue(self.center/1e6)
+        self.ui.spanEdit.setValue(self.span/1e6)
+
+    @QtCore.pyqtSlot(object)
+    def plotUpdate(self, data):
+        self.curve.setData(data)
+        if self.WATERFALL:
+            self.waterfallUpdate(data)
+
+    def waterfallUpdate(self, data):
+        if self.waterfallImg is None:
+            self.waterfallImgArray = np.zeros((self.waterfallHistorySize, len(data)))
+            self.waterfallImg = pg.ImageItem()
+            #self.waterfallImg.scale((data[-1] - data[0]) / len(data), 1)
+            self.waterfallImg.scale(1, 1)
+            #self.waterfallImg.setPxMode(False)
+            self.waterfallImg.setPos(0,-self.waterfallHistorySize)
+            self.waterfallPlot.clear()
+            self.waterfallPlot.addItem(self.waterfallImg)
+            self.waterfallHistogram.setImageItem(self.waterfallImg)
+
+        self.waterfallImgArray = np.roll(self.waterfallImgArray, -1, axis=0)
+        self.waterfallImgArray[-1] = data
+        self.waterfallImg.setImage(self.waterfallImgArray.T,
+                                   autoLevels=True, autoRange=False)
 ### SETUP SAMPLER AND WORKER
     def setupSampler(self):
         self.samplerThread = QtCore.QThread(self)
@@ -98,6 +133,24 @@ class Analyzer(QtGui.QMainWindow):
         self.sampler = None
         self.workerThread.exit(0)
         self.worker = None
+
+    @pyqtSlot(float)
+    def onStartFreq(self, startFreq):
+        if startFreq*1e6 < self.stopFreq:
+            self.startFreq = startFreq*1e6
+            self.span = self.stopFreq - self.startFreq
+            self.center = self.startFreq + self.span/2
+            self.updateFreqs()
+        else:
+            self.startFreq = startFreq*1e6
+            self.stopFreq = self.startFreq + self.step
+            self.span = self.stopFreq - self.startFreq
+            self.center = self.startFreq + self.span/2
+            self.updateFreqs()
+
+    @pyqtSlot()
+    def onStopFreq(self):
+        pass
 
     @pyqtSlot()
     def onRbw(self):

@@ -115,6 +115,43 @@ class Interface(object):
         spacerItem = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         self.freqHLayout_1.addItem(spacerItem)
 
+        self.freqHLayout_2 = QtGui.QHBoxLayout()
+        self.freqHLayout_2.setObjectName(_fromUtf8("freqHLayout_2"))
+        self.freqVLayout_1.addLayout(self.freqHLayout_2)
+
+        # Center frequency setting
+        self.centerLayout = QtGui.QFormLayout()
+        self.centerLayout.setObjectName(_fromUtf8("centerLayout"))
+        self.centerLabel = QtGui.QLabel(self.freqBox)
+        self.centerLabel.setObjectName(_fromUtf8("centerLabel"))
+        self.centerLayout.setWidget(0, QtGui.QFormLayout.LabelRole, self.centerLabel)
+
+        self.centerEdit = pg.SpinBox(self.freqBox, suffix='Hz', siPrefix=True)
+        self.centerEdit.setObjectName(_fromUtf8("centerEdit"))
+        self.centerEdit.setDecimals(2)
+        self.centerEdit.setRange(1e6, 1280e6)
+        self.stopEdit.setSingleStep(1e6)
+        self.centerEdit.setKeyboardTracking(False)
+        self.centerLayout.setWidget(0, QtGui.QFormLayout.FieldRole, self.centerEdit)
+        self.freqHLayout_2.addLayout(self.centerLayout)
+
+        # Span setting
+        self.spanLayout = QtGui.QFormLayout()
+        self.spanLayout.setObjectName(_fromUtf8("spanLayout"))
+        self.spanLabel = QtGui.QLabel(self.freqBox)
+        self.spanLabel.setObjectName(_fromUtf8("spanLabel"))
+        self.spanLayout.setWidget(0, QtGui.QFormLayout.LabelRole, self.spanLabel)
+
+        self.spanEdit = pg.SpinBox(self.freqBox, suffix='Hz', siPrefix=True)
+        self.spanEdit.setObjectName(_fromUtf8("spanEdit"))
+        self.spanEdit.setDecimals(2)
+        self.spanEdit.setRange(1e5, 1280e6)
+        self.stopEdit.setSingleStep(1e5)
+        self.spanEdit.setKeyboardTracking(False)
+        self.spanLayout.setWidget(0, QtGui.QFormLayout.FieldRole, self.spanEdit)
+        self.freqHLayout_2.addLayout(self.spanLayout)
+        self.freqHLayout_2.addItem(spacerItem)
+
         self.verticalLayout_1.addWidget(self.freqBox)
         self.horizontalLayout_1.addLayout(self.verticalLayout_1)
 
@@ -366,8 +403,8 @@ class Interface(object):
         self.gainLabel.setText(_translate("MainWindow", "Gain:", None))
         self.refLabel.setText(_translate("MainWindow", "REF:", None))
         self.holdLabel.setText(_translate("MainWindow", "Max HOLD:", None))
-        # self.centerLabel.setText(_translate("MainWindow", "Center [MHz]:", None))
-        # self.spanLabel.setText(_translate("MainWindow", "Span [MHz]:", None))
+        self.centerLabel.setText(_translate("MainWindow", "Center:", None))
+        self.spanLabel.setText(_translate("MainWindow", "Span:", None))
         self.avgLabel_1.setText(_translate("MainWindow", "Average:", None))
         self.avgLabel_2.setText(_translate("MainWindow", "Avg traces:", None))
         self.peakLabel.setText(_translate("MainWindow", "Peak search:", None))
