@@ -7,6 +7,7 @@ import numpy as np
 
 class Sampler(QtCore.QObject):
     samplerError = QtCore.pyqtSignal(object)
+    dataReady = QtCore.pyqtSignal(object)
 
     def __init__(self, gain, samp_rate, freqs, num_samples, parent=None):
         super(Sampler, self).__init__(parent)
@@ -28,4 +29,53 @@ class Sampler(QtCore.QObject):
         except IOError:
             self.WORKING = False
             print "Failed to initiate device. Please reconnect."
-            self.samplerError.emit("Failed to initiate device. Please reconnect.")
+            self.errorMsg = "Failed to initiate device. Please reconnect."
+            self.samplerError.emit(self.errorMsg)
+
+    def sampling(self):
+        print 'Starting sampler...'
+        while self.WORKING:
+            prev = 0
+            counter = 0
+            gain = self.gain
+            num_samples = self.num_samples
+            self.BREAK = False
+            self.sdr.gain = gain
+            start = time.time()
+            #print self.sdr.get_gain()
+            for i in range(len(self.freqs)):
+                if self.BREAK:
+                    break
+                else:
+                    center_freq = self.freqs[i]
+                    #print "frequency: " + str(center_freq/1e6) + "MHz"
+                    if center_freq != prev:
+                        try:
+                            self.sdr.set_center_freq(center_freq)
+                        except:
+                            self.WORKING = False
+                            print "Device failure while setting center frequency"
+                            self.errorMsg = "Device failure while setting center frequency"
+                            self.samplerError.emit(self.errorMsg)
+                            break
+                        prev = center_freq
+                    else:
+                        pass
+
+                    #time.sleep(0.01)
+                    try:
+                        x = self.sdr.read_samples(2048)
+                        data = self.sdr.read_samples(num_samples)
+                    except:
+                        self.WORKING = False
+                        print "Device failure while getting samples"
+                        self.errorMsg = "Device failure while getting samples"
+                        self.samplerError.emit(self.errorMsg)
+                        break
+                    if self.MEASURE:
+                        self.offset = np.mean(data)
+                    print center_freq
+                    counter += 1
+                    self.dataReady.emit([i, center_freq, data])
+            #print str(counter) + " samples in " + str(time.time()-start) + " seconds"
+        self.sdr.close()

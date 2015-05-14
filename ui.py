@@ -18,7 +18,9 @@ except AttributeError:
         return QtGui.QApplication.translate(context, text, disambig)
 
 class Interface(object):
-    def setupUi(self, MainWindow):
+    def setupUi(self, MainWindow, step, ref):
+        self.step = step
+        self.ref = ref
         MainWindow.setObjectName(_fromUtf8("MainWindow"))
         MainWindow.resize(1000, 600)
         self.centralWidget = QtGui.QWidget(MainWindow)
@@ -65,7 +67,7 @@ class Interface(object):
         self.startEdit = pg.SpinBox(self.freqBox, suffix='Hz', siPrefix=True)
         self.startEdit.setObjectName(_fromUtf8("startEdit"))
         self.startEdit.setDecimals(2)
-        self.startEdit.setRange(1e6, 1280e6)
+        self.startEdit.setRange(30e6, 1280e6-self.step)
         self.startEdit.setSingleStep(1e5)
         self.startEdit.setKeyboardTracking(False)
         self.startLayout.setWidget(0, QtGui.QFormLayout.FieldRole, self.startEdit)
@@ -81,7 +83,7 @@ class Interface(object):
         self.stopEdit = pg.SpinBox(self.freqBox, suffix='Hz', siPrefix=True)
         self.stopEdit.setObjectName(_fromUtf8("stopEdit"))
         self.stopEdit.setDecimals(2)
-        self.stopEdit.setRange(1e6, 1280e6)
+        self.stopEdit.setRange(30e6+self.step, 1280e6)
         self.stopEdit.setSingleStep(1e5)
         self.stopEdit.setKeyboardTracking(False)
         self.stopLayout.setWidget(0, QtGui.QFormLayout.FieldRole, self.stopEdit)
@@ -129,7 +131,7 @@ class Interface(object):
         self.centerEdit = pg.SpinBox(self.freqBox, suffix='Hz', siPrefix=True)
         self.centerEdit.setObjectName(_fromUtf8("centerEdit"))
         self.centerEdit.setDecimals(2)
-        self.centerEdit.setRange(1e6, 1280e6)
+        self.centerEdit.setRange(30e6+self.step/2, 1280e6-self.step/2)
         self.stopEdit.setSingleStep(1e6)
         self.centerEdit.setKeyboardTracking(False)
         self.centerLayout.setWidget(0, QtGui.QFormLayout.FieldRole, self.centerEdit)
@@ -145,7 +147,7 @@ class Interface(object):
         self.spanEdit = pg.SpinBox(self.freqBox, suffix='Hz', siPrefix=True)
         self.spanEdit.setObjectName(_fromUtf8("spanEdit"))
         self.spanEdit.setDecimals(2)
-        self.spanEdit.setRange(1e5, 1280e6)
+        self.spanEdit.setRange(self.step, 1250e6)
         self.stopEdit.setSingleStep(1e5)
         self.spanEdit.setKeyboardTracking(False)
         self.spanLayout.setWidget(0, QtGui.QFormLayout.FieldRole, self.spanEdit)
@@ -205,6 +207,7 @@ class Interface(object):
         self.refLayout.setWidget(0, QtGui.QFormLayout.LabelRole, self.refLabel)
         self.refEdit = QtGui.QDoubleSpinBox(self.settingsBox)
         self.refEdit.setObjectName(_fromUtf8("refEdit"))
+        self.refEdit.setValue(self.ref)
         self.refEdit.setDecimals(0)
         self.refEdit.setKeyboardTracking(False)
         self.refLayout.setWidget(0, QtGui.QFormLayout.FieldRole, self.refEdit)

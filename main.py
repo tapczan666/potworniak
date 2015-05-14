@@ -23,18 +23,26 @@ class Analyzer(QtGui.QMainWindow):
         self.stopFreq = 100e6
         self.span = self.stopFreq - self.startFreq
         self.center = self.startFreq + self.span/2
+        self.step = 1.8e6
+        self.ref = 10
+
+        self.gain = 0
+        self.samp_rate = 2.4e6
 
         self.waterfallHistorySize = 100
 
         self.ui = Interface()
-        self.ui.setupUi(self)
+        self.ui.setupUi(self, self.step, self.ref)
+
+        self.nfft = self.ui.rbwEdit.itemData(self.ui.rbwEdit.currentIndex()).toInt()[0]
+        self.num_samples = self.nfft*2
 
         self.createPlot()
 
         ### SIGNALS AND SLOTS ###
         self.ui.startButton.clicked.connect(self.onStart)
         self.ui.stopButton.clicked.connect(self.onStop)
-        self.ui.startEdit.sigValueChanged.connect(self.onStartFreq)
+        self.ui.startEdit.valueChanged.connect(self.onStartFreq)
         self.ui.waterfallCheck.stateChanged.connect(self.onWaterfall)
 
 ### PLOT FUNCTIONS ###
@@ -46,9 +54,11 @@ class Analyzer(QtGui.QMainWindow):
             self.ui.plotLayout_2.addWidget(self.plot)
         self.plot.showGrid(x=True, y=True)
         self.plot.setMouseEnabled(x=False, y=False)
-        self.plot.setYRange(0, 100)
+        self.plot.setYRange(self.ref-100, self.ref)
         self.plot.setXRange(self.startFreq/1e6, self.stopFreq/1e6)
         self.curve = self.plot.plot(pen='y')
+
+        self.updateFreqs()
 
     def createWaterfall(self):
         self.waterfallPlot = pg.PlotWidget()
@@ -66,12 +76,12 @@ class Analyzer(QtGui.QMainWindow):
         self.waterfallImg = None
 
     def updateFreqs(self):
-        #self.freqs = np.arange(self.startFreq+self.step/2, self.stopFreq+self.step/2, self.step)
+        self.freqs = np.arange(self.startFreq+self.step/2, self.stopFreq+self.step/2, self.step)
         self.plot.setXRange(self.startFreq/1e6, self.stopFreq/1e6)
-        self.ui.startEdit.setValue(self.startFreq/1e6)
-        self.ui.stopEdit.setValue(self.stopFreq/1e6)
-        self.ui.centerEdit.setValue(self.center/1e6)
-        self.ui.spanEdit.setValue(self.span/1e6)
+        self.ui.startEdit.setValue(self.startFreq)
+        self.ui.stopEdit.setValue(self.stopFreq)
+        self.ui.centerEdit.setValue(self.center)
+        self.ui.spanEdit.setValue(self.span)
 
     @QtCore.pyqtSlot(object)
     def plotUpdate(self, data):
@@ -121,36 +131,39 @@ class Analyzer(QtGui.QMainWindow):
         self.ui.startButton.setEnabled(False)
         self.ui.stopButton.setEnabled(True)
 
-        self.setupWorker()
+        #self.setupWorker()
         self.setupSampler()
 
     @pyqtSlot()
     def onStop(self):
         self.ui.startButton.setEnabled(True)
         self.ui.stopButton.setEnabled(False)
+        self.ui.statusbar.setVisible(False)
 
         self.samplerThread.exit(0)
+        self.sampler.WORKING = False
         self.sampler = None
-        self.workerThread.exit(0)
-        self.worker = None
+
+        # self.workerThread.exit(0)
+        # self.worker = None
 
     @pyqtSlot(float)
-    def onStartFreq(self, startFreq):
-        if startFreq*1e6 < self.stopFreq:
-            self.startFreq = startFreq*1e6
-            self.span = self.stopFreq - self.startFreq
-            self.center = self.startFreq + self.span/2
-            self.updateFreqs()
-        else:
-            self.startFreq = startFreq*1e6
+    def onStartFreq(self, value):
+        self.startFreq = value
+        if self.startFreq > self.stopFreq - self.step:
             self.stopFreq = self.startFreq + self.step
-            self.span = self.stopFreq - self.startFreq
-            self.center = self.startFreq + self.span/2
-            self.updateFreqs()
+        self.span = self.stopFreq - self.startFreq
+        self.center = self.startFreq + self.span/2
+        self.updateFreqs()
 
-    @pyqtSlot()
-    def onStopFreq(self):
-        pass
+    @pyqtSlot(float)
+    def onStopFreq(self, value):
+        self.stopFreq = value
+        if self.stopFreq < self.startFreq + self.step:
+            self.startFreq = self.stopFreq - self.step
+        self.span = self.stopFreq - self.startFreq
+        self.center = self.startFreq + self.span/2
+        self.updateFreqs()
 
     @pyqtSlot()
     def onRbw(self):
@@ -159,6 +172,7 @@ class Analyzer(QtGui.QMainWindow):
     @pyqtSlot(object)
     def onError(self, errorMsg):
         self.ui.statusbar.addWidget(QtGui.QLabel(errorMsg))
+        self.ui.statusbar.setVisible(True)
 
     @pyqtSlot(int)
     def onWaterfall(self, state):
