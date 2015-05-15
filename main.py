@@ -19,12 +19,12 @@ class Analyzer(QtGui.QMainWindow):
         self.WATERFALL = False
 
         ### VARIABLES ###
-        self.startFreq = 80e6
-        self.stopFreq = 100e6
-        self.span = self.stopFreq - self.startFreq
-        self.center = self.startFreq + self.span/2
+        # self.startFreq = 80e6
+        # self.stopFreq = 100e6
+        # self.span = self.stopFreq - self.startFreq
+        # self.center = self.startFreq + self.span/2
         self.step = 1.8e6
-        self.ref = 10
+        self.ref = 0
 
         self.gain = 0
         self.samp_rate = 2.4e6
@@ -42,6 +42,7 @@ class Analyzer(QtGui.QMainWindow):
         ### SIGNALS AND SLOTS ###
         self.ui.startButton.clicked.connect(self.onStart)
         self.ui.stopButton.clicked.connect(self.onStop)
+        self.ui.plotTabs.currentChanged.connect(self.onMode)
         self.ui.startEdit.valueChanged.connect(self.onStartFreq)
         self.ui.waterfallCheck.stateChanged.connect(self.onWaterfall)
 
@@ -49,8 +50,16 @@ class Analyzer(QtGui.QMainWindow):
     def createPlot(self):
         self.plot = pg.PlotWidget()
         if self.HF == False:
+            self.ui.startEdit.setRange(30e6, 1280e6-self.step)
+            self.ui.stopEdit.setRange(30e6+self.step, 1280e6)
+            self.startFreq = 80e6
+            self.stopFreq = 100e6
             self.ui.plotLayout.addWidget(self.plot)
-        else:
+        elif self.HF:
+            self.ui.startEdit.setRange(1e6, 30e6-self.step)
+            self.ui.stopEdit.setRange(1e6+self.step, 30e6)
+            self.startFreq = 1e6
+            self.stopFreq = 30e6
             self.ui.plotLayout_2.addWidget(self.plot)
         self.plot.showGrid(x=True, y=True)
         self.plot.setMouseEnabled(x=False, y=False)
@@ -58,9 +67,24 @@ class Analyzer(QtGui.QMainWindow):
         self.plot.setXRange(self.startFreq/1e6, self.stopFreq/1e6)
         self.curve = self.plot.plot(pen='y')
 
+        self.span = self.stopFreq - self.startFreq
+        self.center = self.startFreq + self.span/2
+
+        print self.startFreq
         self.updateFreqs()
 
+    def deletePlot(self):
+        self.curve.deleteLater()
+        self.curve = None
+        if self.HF == False:
+            self.ui.plotLayout.removeWidget(self.plot)
+        else:
+            self.ui.plotLayout_2.removeWidget(self.plot)
+        self.plot.deleteLater()
+        self.plot = None
+
     def createWaterfall(self):
+        self.WATERFALL = True
         self.waterfallPlot = pg.PlotWidget()
         if self.HF == False:
             self.ui.plotLayout.addWidget(self.waterfallPlot)
@@ -74,6 +98,21 @@ class Analyzer(QtGui.QMainWindow):
         self.waterfallHistogram.gradient.loadPreset("flame")
 
         self.waterfallImg = None
+
+    def deleteWaterfall(self):
+        if self.WATERFALL:
+            self.WATERFALL = False
+            if self.HF == False:
+                self.ui.plotLayout.removeWidget(self.waterfallPlot)
+            else:
+                self.ui.plotLayout_2.removeWidget(self.waterfallPlot)
+            self.waterfallPlot.deleteLater()
+            self.waterfallPlot = None
+            self.waterfallHistogram.deleteLater()
+            self.waterfallHistogram = None
+            if self.waterfallImg is not None:
+                self.waterfallImg.deleteLater()
+                self.waterfallImg = None
 
     def updateFreqs(self):
         self.freqs = np.arange(self.startFreq+self.step/2, self.stopFreq+self.step/2, self.step)
@@ -147,6 +186,22 @@ class Analyzer(QtGui.QMainWindow):
         # self.workerThread.exit(0)
         # self.worker = None
 
+    @pyqtSlot(int)
+    def onMode(self, index):
+        if index == 0:
+            self.deletePlot()
+            self.ui.waterfallCheck.setChecked(False)
+            self.HF = False
+
+            self.createPlot()
+
+        elif index == 1:
+            self.deletePlot()
+            self.ui.waterfallCheck.setChecked(False)
+            self.HF = True
+
+            self.createPlot()
+
     @pyqtSlot(float)
     def onStartFreq(self, value):
         self.startFreq = value
@@ -177,17 +232,9 @@ class Analyzer(QtGui.QMainWindow):
     @pyqtSlot(int)
     def onWaterfall(self, state):
         if state ==2:
-            self.WATERFALL = True
             self.createWaterfall()
         elif state == 0:
-            self.WATERFALL = False
-            self.ui.plotLayout.removeWidget(self.waterfallPlot)
-            self.waterfallPlot.deleteLater()
-            self.waterfallPlot = None
-            self.waterfallImg.deleteLater()
-            self.waterfallImg = None
-            self.waterfallHistogram.deleteLater()
-            self.waterfallHistogram = None
+            self.deleteWaterfall()
 
 # Start Qt event loop unless running in interactive mode or using pyside.
 if __name__ == '__main__':
