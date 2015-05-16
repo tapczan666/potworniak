@@ -121,6 +121,10 @@ class Analyzer(QtGui.QMainWindow):
         self.xData = []
         self.yData = []
         self.plot.setXRange(self.startFreq/1e6, self.stopFreq/1e6)
+        spacing = self.span/1e7
+        print spacing
+        self.plot.getAxis('bottom').setTickSpacing(major=spacing, minor=spacing/2)
+
         self.ui.startEdit.setValue(self.startFreq)
         self.ui.stopEdit.setValue(self.stopFreq)
         self.ui.centerEdit.setValue(self.center)
@@ -185,6 +189,8 @@ class Analyzer(QtGui.QMainWindow):
     def onStart(self):
         self.ui.startButton.setEnabled(False)
         self.ui.stopButton.setEnabled(True)
+        self.ui.statusbar.setVisible(False)
+        self.ui.statusbar.clearMessage()
 
         self.setupWorker()
         self.setupSampler()
@@ -193,7 +199,6 @@ class Analyzer(QtGui.QMainWindow):
     def onStop(self):
         self.ui.startButton.setEnabled(True)
         self.ui.stopButton.setEnabled(False)
-        self.ui.statusbar.setVisible(False)
 
         self.samplerThread.exit(0)
         self.sampler.WORKING = False
@@ -252,8 +257,10 @@ class Analyzer(QtGui.QMainWindow):
 
     @pyqtSlot(object)
     def onError(self, errorMsg):
-        self.ui.statusbar.addWidget(QtGui.QLabel(errorMsg))
+        #self.ui.statusbar.addWidget(QtGui.QLabel(errorMsg))
+        self.ui.statusbar.showMessage("ERROR: " + errorMsg)
         self.ui.statusbar.setVisible(True)
+        self.ui.stopButton.click()
 
     @pyqtSlot(int)
     def onWaterfall(self, state):

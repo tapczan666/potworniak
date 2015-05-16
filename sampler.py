@@ -16,6 +16,8 @@ class Sampler(QtCore.QObject):
         self.freqs = freqs
         self.num_samples = num_samples
         self.offset = 0
+        self.sdr = None
+        self.errorMsg = None
 
         self.WORKING = True
         self.BREAK = False
@@ -78,4 +80,7 @@ class Sampler(QtCore.QObject):
                     counter += 1
                     self.dataAcquired.emit([i, center_freq, data])
             #print str(counter) + " samples in " + str(time.time()-start) + " seconds"
-        self.sdr.close()
+        if self.errorMsg is not None:
+            self.samplerError.emit(self.errorMsg)
+        if self.sdr is not None:
+            self.sdr.close()
