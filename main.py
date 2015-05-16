@@ -19,15 +19,14 @@ class Analyzer(QtGui.QMainWindow):
         self.WATERFALL = False
 
         ### VARIABLES ###
-        # self.startFreq = 80e6
-        # self.stopFreq = 100e6
-        # self.span = self.stopFreq - self.startFreq
-        # self.center = self.startFreq + self.span/2
         self.step = 1.8e6
         self.ref = 0
 
         self.gain = 0
         self.samp_rate = 2.4e6
+
+        self.length = 2048
+        self.slice_length = int(np.floor(self.length*(self.step/self.samp_rate)))
 
         self.waterfallHistorySize = 100
 
@@ -52,12 +51,14 @@ class Analyzer(QtGui.QMainWindow):
         if self.HF == False:
             self.ui.startEdit.setRange(30e6, 1280e6-self.step)
             self.ui.stopEdit.setRange(30e6+self.step, 1280e6)
+            self.ui.centerEdit.setRange(30e6+self.step/2, 1280e6-self.step/2)
             self.startFreq = 80e6
             self.stopFreq = 100e6
             self.ui.plotLayout.addWidget(self.plot)
         elif self.HF:
             self.ui.startEdit.setRange(1e6, 30e6-self.step)
             self.ui.stopEdit.setRange(1e6+self.step, 30e6)
+            self.ui.centerEdit.setRange(1e6+self.step/2, 30e6-self.step/2)
             self.startFreq = 1e6
             self.stopFreq = 30e6
             self.ui.plotLayout_2.addWidget(self.plot)
@@ -70,7 +71,6 @@ class Analyzer(QtGui.QMainWindow):
         self.span = self.stopFreq - self.startFreq
         self.center = self.startFreq + self.span/2
 
-        print self.startFreq
         self.updateFreqs()
 
     def deletePlot(self):
@@ -116,6 +116,10 @@ class Analyzer(QtGui.QMainWindow):
 
     def updateFreqs(self):
         self.freqs = np.arange(self.startFreq+self.step/2, self.stopFreq+self.step/2, self.step)
+        # self.xData = np.zeros(self.slice_length*len(self.freqs))
+        # self.yData = np.zeros(self.slice_length*len(self.freqs))
+        self.xData = []
+        self.yData = []
         self.plot.setXRange(self.startFreq/1e6, self.stopFreq/1e6)
         self.ui.startEdit.setValue(self.startFreq)
         self.ui.stopEdit.setValue(self.stopFreq)
@@ -124,7 +128,17 @@ class Analyzer(QtGui.QMainWindow):
 
     @QtCore.pyqtSlot(object)
     def plotUpdate(self, data):
-        self.curve.setData(data)
+        index = data[0]
+        xData = data[2]
+        yData = data[1]
+        if len(yData) == 0:
+                self.xData = xData
+                self.yData = yData
+        else:
+            self.xData = np.concatenate((self.xData[:index*self.slice_length], xData, self.xData[(index+1)*self.slice_length:]))
+            self.yData = np.concatenate((self.yData[:index*self.slice_length], yData, self.yData[(index+1)*self.slice_length:]))
+
+        self.curve.setData(self.xData, self.yData)
         if self.WATERFALL:
             self.waterfallUpdate(data)
 
@@ -151,6 +165,7 @@ class Analyzer(QtGui.QMainWindow):
         self.sampler.moveToThread(self.samplerThread)
         self.samplerThread.started.connect(self.sampler.sampling)
         self.sampler.samplerError.connect(self.onError)
+        self.sampler.dataAcquired.connect(self.worker.work)
         #self.ui.gainSlider.valueChanged[int].connect(self.setGain)
         #self.ui.gainSlider.valueChanged[int].connect(self.sampler.changeGain, QtCore.Qt.QueuedConnection)
         self.samplerThread.start(QtCore.QThread.NormalPriority)
@@ -159,7 +174,8 @@ class Analyzer(QtGui.QMainWindow):
         self.workerThread = QtCore.QThread(self)
         self.worker = Worker(self.nfft, self.length, self.slice_length, self.samp_rate)
         self.worker.moveToThread(self.workerThread)
-        self.workerThread.started.connect(self.worker.working)
+        #self.workerThread.started.connect(self.worker.working)
+        self.worker.dataReady.connect(self.plotUpdate)
         #self.worker.abort.connect(self.onAbort)
         self.workerThread.start(QtCore.QThread.NormalPriority)
 
@@ -170,7 +186,7 @@ class Analyzer(QtGui.QMainWindow):
         self.ui.startButton.setEnabled(False)
         self.ui.stopButton.setEnabled(True)
 
-        #self.setupWorker()
+        self.setupWorker()
         self.setupSampler()
 
     @pyqtSlot()
@@ -195,12 +211,22 @@ class Analyzer(QtGui.QMainWindow):
 
             self.createPlot()
 
+            self.ui.settingsTabs.setEnabled(True)
+
         elif index == 1:
             self.deletePlot()
             self.ui.waterfallCheck.setChecked(False)
             self.HF = True
 
             self.createPlot()
+
+            self.ui.settingsTabs.setEnabled(True)
+
+        elif index == 2:
+            self.ui.settingsTabs.setEnabled(True)
+
+        elif index == 3:
+            self.ui.settingsTabs.setEnabled(False)
 
     @pyqtSlot(float)
     def onStartFreq(self, value):

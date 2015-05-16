@@ -39,14 +39,24 @@ class Interface(object):
         self.verticalLayout_1.addWidget(self.plotTabs)
 
         self.plotTab_1 = QtGui.QWidget()
-        self.plotTab_1.setObjectName(_fromUtf8("plotBox"))
+        self.plotTab_1.setObjectName(_fromUtf8("plotTab_1"))
         self.plotLayout = QtGui.QVBoxLayout(self.plotTab_1)
         self.plotTabs.addTab(self.plotTab_1, "Wideband")
 
         self.plotTab_2 = QtGui.QWidget()
-        self.plotTab_2.setObjectName(_fromUtf8("plotBox_2"))
+        self.plotTab_2.setObjectName(_fromUtf8("plotTab_2"))
         self.plotLayout_2 = QtGui.QVBoxLayout(self.plotTab_2)
         self.plotTabs.addTab(self.plotTab_2, "HF")
+
+        self.plotTab_3 = QtGui.QWidget()
+        self.plotTab_3.setObjectName(_fromUtf8("plotTab_3"))
+        self.plotLayout_3 = QtGui.QVBoxLayout(self.plotTab_3)
+        self.plotTabs.addTab(self.plotTab_3, "RTSA")
+
+        self.plotTab_4 = QtGui.QWidget()
+        self.plotTab_4.setObjectName(_fromUtf8("plotTab_4"))
+        self.plotLayout_4 = QtGui.QVBoxLayout(self.plotTab_4)
+        self.plotTabs.addTab(self.plotTab_4, "IQ")
 
     ### FREQ SETTINGS LAYOUT ###
         self.freqBox = QtGui.QGroupBox(self.centralWidget)
@@ -129,7 +139,6 @@ class Interface(object):
         self.centerEdit = pg.SpinBox(self.freqBox, suffix='Hz', siPrefix=True)
         self.centerEdit.setObjectName(_fromUtf8("centerEdit"))
         self.centerEdit.setDecimals(2)
-        self.centerEdit.setRange(30e6+self.step/2, 1280e6-self.step/2)
         self.stopEdit.setSingleStep(1e6)
         self.centerEdit.setKeyboardTracking(False)
         self.centerLayout.setWidget(0, QtGui.QFormLayout.FieldRole, self.centerEdit)

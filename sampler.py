@@ -7,7 +7,7 @@ import numpy as np
 
 class Sampler(QtCore.QObject):
     samplerError = QtCore.pyqtSignal(object)
-    dataReady = QtCore.pyqtSignal(object)
+    dataAcquired = QtCore.pyqtSignal(object)
 
     def __init__(self, gain, samp_rate, freqs, num_samples, parent=None):
         super(Sampler, self).__init__(parent)
@@ -74,8 +74,8 @@ class Sampler(QtCore.QObject):
                         break
                     if self.MEASURE:
                         self.offset = np.mean(data)
-                    print center_freq
+                    #print center_freq
                     counter += 1
-                    self.dataReady.emit([i, center_freq, data])
+                    self.dataAcquired.emit([i, center_freq, data])
             #print str(counter) + " samples in " + str(time.time()-start) + " seconds"
         self.sdr.close()
