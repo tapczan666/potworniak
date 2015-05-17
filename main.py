@@ -7,6 +7,7 @@ from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import pyqtSlot
 from sampler import Sampler
 from worker import Worker
+from controller import USBController
 
 app = QtGui.QApplication([])
 
@@ -48,6 +49,7 @@ class Analyzer(QtGui.QMainWindow):
         self.ui.rbwEdit.activated[int].connect(self.onRbw)
         self.ui.centerEdit.valueChanged.connect(self.onCenter)
         self.ui.spanEdit.valueChanged.connect(self.onSpan)
+        self.ui.refEdit.valueChanged.connect(self.onRef)
         self.ui.waterfallCheck.stateChanged.connect(self.onWaterfall)
 
 ### PLOT FUNCTIONS ###
@@ -109,8 +111,9 @@ class Analyzer(QtGui.QMainWindow):
         self.waterfallPlot.setXLink(self.plot)
         self.waterfallPlot.setMouseEnabled(x=False, y=False)
 
-        self.waterfallHistogram = pg.HistogramLUTItem()
+        self.waterfallHistogram = pg.HistogramLUTItem(fillHistogram=False)
         self.waterfallHistogram.gradient.loadPreset("flame")
+        self.waterfallHistogram.setHistogramRange(self.ref-100, self.ref)
 
         self.waterfallImg = None
 
@@ -330,6 +333,11 @@ class Analyzer(QtGui.QMainWindow):
         self.startFreq = self.center - self.span/2
         self.stopFreq = self.center + self.span/2
         self.updateFreqs()
+
+    @QtCore.pyqtSlot(int)
+    def onRef(self, ref):
+        self.ref = ref
+        self.plot.setYRange(self.ref-100, self.ref)
 
     @pyqtSlot(object)
     def onError(self, errorMsg):

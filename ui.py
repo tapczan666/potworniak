@@ -216,6 +216,7 @@ class Interface(object):
         self.refEdit.setObjectName(_fromUtf8("refEdit"))
         self.refEdit.setValue(self.ref)
         self.refEdit.setDecimals(0)
+        self.refEdit.setRange(-50, 50)
         self.refEdit.setKeyboardTracking(False)
         self.refLayout.setWidget(0, QtGui.QFormLayout.FieldRole, self.refEdit)
         self.settingsVLayout_1.addLayout(self.refLayout)
