@@ -23,6 +23,7 @@ class Analyzer(QtGui.QMainWindow):
         self.DELTA = False
         self.HOLD = False
         self.AVERAGE = False
+        self.PEAK = False
 
         ### VARIABLES ###
         self.step = 1.8e6
@@ -67,6 +68,7 @@ class Analyzer(QtGui.QMainWindow):
         self.ui.holdCheck.stateChanged.connect(self.onHold)
         self.ui.avgCheck.stateChanged.connect(self.onAvg)
         self.ui.avgEdit.valueChanged.connect(self.onAvgEdit)
+        self.ui.peakCheck.stateChanged.connect(self.onPeak)
         self.ui.waterfallCheck.stateChanged.connect(self.onWaterfall)
 
 ### PLOT FUNCTIONS ###
@@ -213,30 +215,6 @@ class Analyzer(QtGui.QMainWindow):
         yData = self.yData
 
         if len(self.xData) == self.sliceLength*len(self.freqs):
-            for i in range(len(self.MARKERS)):
-                if self.MARKERS[i]:
-                    if self.markerIndex[i] == None:
-                        index = np.argmin(np.abs(self.xData-self.markerValue[i]))
-                        self.markerIndex[i] = index
-                    self.markers[i].setIndex(self.markerIndex[i])
-                    self.markerText[i].setText("Mk1:\nf=%0.1f MHz\nP=%0.1f dBm" % (self.xData[self.markerIndex[i]], self.yData[self.markerIndex[i]]))
-
-            if self.DELTA:
-                if self.deltaIndex == None:
-                    index = np.argmin(np.abs(self.xData-self.deltaValue))
-                    self.deltaIndex = index
-                self.delta.setIndex(self.deltaIndex)
-                dx = self.xData[self.deltaIndex] - self.xData[self.markerIndex[0]]
-                dy = self.yData[self.deltaIndex] - self.yData[self.markerIndex[0]]
-                self.deltaText.setText("Delta:\ndf=%0.1f MHz\ndP=%0.1f dB" % (dx, dy))
-
-            if self.HOLD:
-                if self.holdData is None:
-                    self.holdData = self.yData
-                else:
-                    self.holdData = np.amax([self.holdData, self.yData], axis=0)
-                self.holdCurve.setData(self.xData, self.holdData)
-
             if self.AVERAGE:
                 if self.avgCounter == 0:
                     if self.avgArray is None:
@@ -254,6 +232,35 @@ class Analyzer(QtGui.QMainWindow):
                 else:
                     self.avgCounter -= 1
                 yData = self.avgData
+
+            for i in range(len(self.MARKERS)):
+                if self.MARKERS[i]:
+                    if self.markerIndex[i] == None:
+                        index = np.argmin(np.abs(self.xData-self.markerValue[i]))
+                        self.markerIndex[i] = index
+                    self.markers[i].setIndex(self.markerIndex[i])
+                    self.markerText[i].setText("Mk1:\nf=%0.1f MHz\nP=%0.1f dBm" % (self.xData[self.markerIndex[i]], yData[self.markerIndex[i]]))
+
+            if self.DELTA:
+                if self.deltaIndex == None:
+                    index = np.argmin(np.abs(self.xData-self.deltaValue))
+                    self.deltaIndex = index
+                self.delta.setIndex(self.deltaIndex)
+                dx = self.xData[self.deltaIndex] - self.xData[self.markerIndex[0]]
+                dy = yData[self.deltaIndex] - yData[self.markerIndex[0]]
+                self.deltaText.setText("Delta:\ndf=%0.1f MHz\ndP=%0.1f dB" % (dx, dy))
+
+            if self.HOLD:
+                if self.holdData is None:
+                    self.holdData = yData
+                else:
+                    self.holdData = np.amax([self.holdData, yData], axis=0)
+                self.holdCurve.setData(self.xData, self.holdData)
+
+            if self.PEAK:
+                self.peakIndex = np.argmax(yData)
+                self.peak.setIndex(self.peakIndex)
+                self.peakText.setText("Peak:\nf=%0.1f MHz\nP=%0.1f dBm" % (self.xData[self.peakIndex], yData[self.peakIndex]))
 
             if self.WATERFALL:
                 self.waterfallUpdate(self.xData, yData)
@@ -471,6 +478,9 @@ class Analyzer(QtGui.QMainWindow):
         elif state == 0:
             self.DELTA = False
             self.ui.deltaEdit.setDisabled(True)
+            self.plot.removeItem(self.delta)
+            self.delta.deleteLater()
+            self.delta = None
 
     @pyqtSlot(float)
     def onDeltaEdit(self, freq):
@@ -514,11 +524,18 @@ class Analyzer(QtGui.QMainWindow):
     def onPeak(self, state):
         if state == 2:
             self.PEAK = True
-            self.ui.peakMarker.attach(self.ui.plot)
+            self.peak = pg.CurvePoint(self.curve)
+            self.plot.addItem(self.peak)
+            self.peakArrow = pg.ArrowItem(angle=270)
+            self.peakArrow.setParentItem(self.peak)
+            self.peakText = pg.TextItem("Peak:", anchor=(0.5, 1.5))
+            self.peakText.setParentItem(self.peak)
+
         elif state == 0:
             self.PEAK = False
-            self.ui.peakMarker.detach()
-            self.peak_search = ()
+            self.plot.removeItem(self.peak)
+            self.peak.deleteLater()
+            self.peak = None
 
     @pyqtSlot(object)
     def onError(self, errorMsg):
