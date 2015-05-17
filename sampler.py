@@ -9,12 +9,12 @@ class Sampler(QtCore.QObject):
     samplerError = QtCore.pyqtSignal(object)
     dataAcquired = QtCore.pyqtSignal(object)
 
-    def __init__(self, gain, samp_rate, freqs, num_samples, parent=None):
+    def __init__(self, gain, sampRate, freqs, numSamples, parent=None):
         super(Sampler, self).__init__(parent)
         self.gain = gain
-        self.samp_rate = samp_rate
+        self.sampRate = sampRate
         self.freqs = freqs
-        self.num_samples = num_samples
+        self.numSamples = numSamples
         self.offset = 0
         self.sdr = None
         self.errorMsg = None
@@ -27,7 +27,7 @@ class Sampler(QtCore.QObject):
             self.sdr = RtlSdr()
             self.sdr.set_manual_gain_enabled(1)
             self.sdr.gain = self.gain
-            self.sdr.sample_rate = self.samp_rate
+            self.sdr.sample_rate = self.sampRate
         except IOError:
             self.WORKING = False
             print "Failed to initiate device. Please reconnect."
@@ -40,7 +40,7 @@ class Sampler(QtCore.QObject):
             prev = 0
             counter = 0
             gain = self.gain
-            num_samples = self.num_samples
+            numSamples = self.numSamples
             self.BREAK = False
             self.sdr.gain = gain
             start = time.time()
@@ -67,7 +67,7 @@ class Sampler(QtCore.QObject):
                     #time.sleep(0.01)
                     try:
                         x = self.sdr.read_samples(2048)
-                        data = self.sdr.read_samples(num_samples)
+                        data = self.sdr.read_samples(numSamples)
                     except:
                         self.WORKING = False
                         print "Device failure while getting samples"

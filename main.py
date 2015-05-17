@@ -24,10 +24,10 @@ class Analyzer(QtGui.QMainWindow):
         self.ref = 0
 
         self.gain = 0
-        self.samp_rate = 2.4e6
+        self.sampRate = 2.4e6
 
         self.length = 2048
-        self.slice_length = int(np.floor(self.length*(self.step/self.samp_rate)))
+        self.sliceLength = int(np.floor(self.length*(self.step/self.sampRate)))
 
         self.waterfallHistorySize = 100
 
@@ -35,7 +35,7 @@ class Analyzer(QtGui.QMainWindow):
         self.ui.setupUi(self, self.step, self.ref)
 
         self.nfft = self.ui.rbwEdit.itemData(self.ui.rbwEdit.currentIndex()).toInt()[0]
-        self.num_samples = self.nfft*2
+        self.numSamples = self.nfft*2
 
         self.createPlot()
 
@@ -45,6 +45,9 @@ class Analyzer(QtGui.QMainWindow):
         self.ui.plotTabs.currentChanged.connect(self.onMode)
         self.ui.startEdit.valueChanged.connect(self.onStartFreq)
         self.ui.stopEdit.valueChanged.connect(self.onStopFreq)
+        self.ui.rbwEdit.activated[int].connect(self.onRbw)
+        self.ui.centerEdit.valueChanged.connect(self.onCenter)
+        self.ui.spanEdit.valueChanged.connect(self.onSpan)
         self.ui.waterfallCheck.stateChanged.connect(self.onWaterfall)
 
 ### PLOT FUNCTIONS ###
@@ -136,14 +139,33 @@ class Analyzer(QtGui.QMainWindow):
         self.yData = []
         self.waterfallImg = None
         self.plot.setXRange(self.startFreq/1e6, self.stopFreq/1e6)
-        spacing = self.span/1e7
-        print spacing
-        self.plot.getAxis('bottom').setTickSpacing(major=spacing, minor=spacing/2)
 
         self.ui.startEdit.setValue(self.startFreq)
         self.ui.stopEdit.setValue(self.stopFreq)
         self.ui.centerEdit.setValue(self.center)
         self.ui.spanEdit.setValue(self.span)
+        
+    def updateRbw(self):
+        self.markerIndex = [None, None, None, None]
+        self.deltaIndex = None
+        if self.nfft < 200:
+            self.numSamples = 256
+        else:
+            self.numSamples = self.nfft*2
+            
+        if self.span >=50e6:
+            threshold = 200
+        elif self.span >= 20e6: 
+            threshold = 500
+        else:
+            threshold = 1000
+            
+        if self.nfft < threshold:
+            self.length = 1024
+            self.sliceLength = int(np.floor(self.length*(self.step/self.sampRate)))        
+        else:
+            self.length = self.nfft
+            self.sliceLength = int(np.floor(self.length*(self.step/self.sampRate)))
 
     @QtCore.pyqtSlot(object)
     def plotUpdate(self, data):
@@ -154,11 +176,11 @@ class Analyzer(QtGui.QMainWindow):
                 self.xData = xTemp
                 self.yData = yTemp
         else:
-            self.xData = np.concatenate((self.xData[:index*self.slice_length], xTemp, self.xData[(index+1)*self.slice_length:]))
-            self.yData = np.concatenate((self.yData[:index*self.slice_length], yTemp, self.yData[(index+1)*self.slice_length:]))
+            self.xData = np.concatenate((self.xData[:index*self.sliceLength], xTemp, self.xData[(index+1)*self.sliceLength:]))
+            self.yData = np.concatenate((self.yData[:index*self.sliceLength], yTemp, self.yData[(index+1)*self.sliceLength:]))
 
         self.curve.setData(self.xData, self.yData)
-        if len(self.xData) == self.slice_length*len(self.freqs):
+        if len(self.xData) == self.sliceLength*len(self.freqs):
             if self.WATERFALL:
                 self.waterfallUpdate(self.xData, self.yData)
 
@@ -180,7 +202,7 @@ class Analyzer(QtGui.QMainWindow):
 ### SETUP SAMPLER AND WORKER
     def setupSampler(self):
         self.samplerThread = QtCore.QThread(self)
-        self.sampler = Sampler(self.gain, self.samp_rate, self.freqs, self.num_samples)
+        self.sampler = Sampler(self.gain, self.sampRate, self.freqs, self.numSamples)
         self.sampler.moveToThread(self.samplerThread)
         self.samplerThread.started.connect(self.sampler.sampling)
         self.sampler.samplerError.connect(self.onError)
@@ -191,7 +213,7 @@ class Analyzer(QtGui.QMainWindow):
 
     def setupWorker(self):
         self.workerThread = QtCore.QThread(self)
-        self.worker = Worker(self.nfft, self.length, self.slice_length, self.samp_rate)
+        self.worker = Worker(self.nfft, self.length, self.sliceLength, self.sampRate)
         self.worker.moveToThread(self.workerThread)
         #self.workerThread.started.connect(self.worker.working)
         self.worker.dataReady.connect(self.plotUpdate)
@@ -201,7 +223,6 @@ class Analyzer(QtGui.QMainWindow):
 
 ### GUI FUNCTIONS ###
     def mouseMoved(self, evt):
-        """Update crosshair when mouse is moved"""
         pos = evt[0]
         if self.plot.sceneBoundingRect().contains(pos):
             mousePoint = self.plot.getViewBox().mapSceneToView(pos)
@@ -280,9 +301,35 @@ class Analyzer(QtGui.QMainWindow):
         self.center = self.startFreq + self.span/2
         self.updateFreqs()
 
-    @pyqtSlot()
-    def onRbw(self):
-        pass
+    @pyqtSlot(int)
+    def onRbw(self, index):
+        self.nfft = self.ui.rbwEdit.itemData(index).toInt()[0]
+        self.updateRbw()
+        if self.RUNNING:
+            self.sampler.numSamples = self.numSamples
+            self.worker.nfft = self.nfft
+            self.worker.length = self.length
+            self.worker.sliceLength = self.sliceLength
+            self.worker.correction = 0
+            self.sampler.BREAK = True
+
+        self.xData = []
+        self.yData = []
+        self.waterfallImg = None
+
+    @QtCore.pyqtSlot(float)
+    def onCenter(self,center):
+        self.center = center
+        self.startFreq = self.center - self.span/2
+        self.stopFreq = self.center + self.span/2
+        self.updateFreqs()
+
+    @QtCore.pyqtSlot(float)
+    def onSpan(self,span):
+        self.span = span
+        self.startFreq = self.center - self.span/2
+        self.stopFreq = self.center + self.span/2
+        self.updateFreqs()
 
     @pyqtSlot(object)
     def onError(self, errorMsg):

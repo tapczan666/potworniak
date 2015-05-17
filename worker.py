@@ -10,12 +10,12 @@ class Worker(QtCore.QObject):
     abort = QtCore.pyqtSignal()
     dataReady = QtCore.pyqtSignal(object)
 
-    def __init__(self, nfft, length, slice_length, samp_rate, parent=None):
+    def __init__(self, nfft, length, sliceLength, sampRate, parent=None):
         super(Worker, self).__init__(parent)
-        self.samp_rate = samp_rate
+        self.sampRate = sampRate
         self.nfft = nfft
         self.length = length
-        self.slice_length = slice_length
+        self.sliceLength = sliceLength
         self.WORKING = True
         self.offset = 0
         self.correction = 0
@@ -23,19 +23,19 @@ class Worker(QtCore.QObject):
     def work(self, data):
         nfft = self.nfft
         length = self.length
-        slice_length = self.slice_length
-        samp_rate = self.samp_rate
+        sliceLength = self.sliceLength
+        sampRate = self.sampRate
         offset = self.offset
         index = data[0]
         center_freq = data[1]
         samples = data[2]
         if len(samples)>2*length:
             samples = samples[:2*length]
-        trash = length - slice_length
+        trash = length - sliceLength
         #print len(samples)
         samples = samples - offset
         samples = samples - np.mean(samples)
-        power, freqs = psd(samples, NFFT=nfft, pad_to=length, noverlap=self.nfft/2, Fs=samp_rate/1e6, detrend=mlab.detrend_none, window=mlab.window_hanning, sides = 'twosided')
+        power, freqs = psd(samples, NFFT=nfft, pad_to=length, noverlap=self.nfft/2, Fs=sampRate/1e6, detrend=mlab.detrend_none, window=mlab.window_hanning, sides = 'twosided')
         power = np.reshape(power, len(power))
         freqs = freqs + center_freq/1e6
         power = power[trash/2:-trash/2]
