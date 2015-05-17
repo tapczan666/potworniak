@@ -84,3 +84,4 @@ class Sampler(QtCore.QObject):
             self.samplerError.emit(self.errorMsg)
         if self.sdr is not None:
             self.sdr.close()
+

@@ -15,6 +15,7 @@ class Analyzer(QtGui.QMainWindow):
         QtGui.QWidget.__init__(self, parent)
 
         ### MODE FLAGS ###
+        self.RUNNING = False
         self.HF = False
         self.WATERFALL = False
 
@@ -43,6 +44,7 @@ class Analyzer(QtGui.QMainWindow):
         self.ui.stopButton.clicked.connect(self.onStop)
         self.ui.plotTabs.currentChanged.connect(self.onMode)
         self.ui.startEdit.valueChanged.connect(self.onStartFreq)
+        self.ui.stopEdit.valueChanged.connect(self.onStopFreq)
         self.ui.waterfallCheck.stateChanged.connect(self.onWaterfall)
 
 ### PLOT FUNCTIONS ###
@@ -70,6 +72,16 @@ class Analyzer(QtGui.QMainWindow):
 
         self.span = self.stopFreq - self.startFreq
         self.center = self.startFreq + self.span/2
+
+        # Crosshair
+        self.vLine = pg.InfiniteLine(angle=90, movable=False)
+        self.hLine = pg.InfiniteLine(angle=0, movable=False)
+        self.plot.addItem(self.vLine, ignoreBounds=True)
+        self.plot.addItem(self.hLine, ignoreBounds=True)
+        self.posLabel = pg.TextItem(anchor=(0,1))
+        self.plot.addItem(self.posLabel)
+        self.mouseProxy = pg.SignalProxy(self.plot.scene().sigMouseMoved,
+                                         rateLimit=60, slot=self.mouseMoved)
 
         self.updateFreqs()
 
@@ -116,10 +128,13 @@ class Analyzer(QtGui.QMainWindow):
 
     def updateFreqs(self):
         self.freqs = np.arange(self.startFreq+self.step/2, self.stopFreq+self.step/2, self.step)
-        # self.xData = np.zeros(self.slice_length*len(self.freqs))
-        # self.yData = np.zeros(self.slice_length*len(self.freqs))
+        if self.RUNNING:
+            self.sampler.freqs = self.freqs
+            self.sampler.BREAK = True
+
         self.xData = []
         self.yData = []
+        self.waterfallImg = None
         self.plot.setXRange(self.startFreq/1e6, self.stopFreq/1e6)
         spacing = self.span/1e7
         print spacing
@@ -133,33 +148,33 @@ class Analyzer(QtGui.QMainWindow):
     @QtCore.pyqtSlot(object)
     def plotUpdate(self, data):
         index = data[0]
-        xData = data[2]
-        yData = data[1]
-        if len(yData) == 0:
-                self.xData = xData
-                self.yData = yData
+        xTemp = data[2]
+        yTemp = data[1]
+        if len(yTemp) == 0:
+                self.xData = xTemp
+                self.yData = yTemp
         else:
-            self.xData = np.concatenate((self.xData[:index*self.slice_length], xData, self.xData[(index+1)*self.slice_length:]))
-            self.yData = np.concatenate((self.yData[:index*self.slice_length], yData, self.yData[(index+1)*self.slice_length:]))
+            self.xData = np.concatenate((self.xData[:index*self.slice_length], xTemp, self.xData[(index+1)*self.slice_length:]))
+            self.yData = np.concatenate((self.yData[:index*self.slice_length], yTemp, self.yData[(index+1)*self.slice_length:]))
 
         self.curve.setData(self.xData, self.yData)
-        if self.WATERFALL:
-            self.waterfallUpdate(data)
+        if len(self.xData) == self.slice_length*len(self.freqs):
+            if self.WATERFALL:
+                self.waterfallUpdate(self.xData, self.yData)
 
-    def waterfallUpdate(self, data):
+    def waterfallUpdate(self, xData, yData):
         if self.waterfallImg is None:
-            self.waterfallImgArray = np.zeros((self.waterfallHistorySize, len(data)))
+            self.waterfallImgArray = np.zeros((self.waterfallHistorySize, len(xData)))
             self.waterfallImg = pg.ImageItem()
-            #self.waterfallImg.scale((data[-1] - data[0]) / len(data), 1)
-            self.waterfallImg.scale(1, 1)
-            #self.waterfallImg.setPxMode(False)
-            self.waterfallImg.setPos(0,-self.waterfallHistorySize)
+            self.waterfallImg.scale((xData[-1] - xData[0]) / len(xData), 1)
+            self.waterfallImg.setPos(xData[0],-self.waterfallHistorySize)
             self.waterfallPlot.clear()
             self.waterfallPlot.addItem(self.waterfallImg)
             self.waterfallHistogram.setImageItem(self.waterfallImg)
+            self.plot.setXRange(self.startFreq/1e6, self.stopFreq/1e6)
 
         self.waterfallImgArray = np.roll(self.waterfallImgArray, -1, axis=0)
-        self.waterfallImgArray[-1] = data
+        self.waterfallImgArray[-1] = yData
         self.waterfallImg.setImage(self.waterfallImgArray.T,
                                    autoLevels=True, autoRange=False)
 ### SETUP SAMPLER AND WORKER
@@ -185,6 +200,16 @@ class Analyzer(QtGui.QMainWindow):
 
 
 ### GUI FUNCTIONS ###
+    def mouseMoved(self, evt):
+        """Update crosshair when mouse is moved"""
+        pos = evt[0]
+        if self.plot.sceneBoundingRect().contains(pos):
+            mousePoint = self.plot.getViewBox().mapSceneToView(pos)
+            self.posLabel.setText("f=%0.1f MHz, P=%0.1f dBm" % (mousePoint.x(),mousePoint.y()))
+            self.vLine.setPos(mousePoint.x())
+            self.hLine.setPos(mousePoint.y())
+            self.posLabel.setPos(mousePoint.x(), mousePoint.y())
+
     @pyqtSlot()
     def onStart(self):
         self.ui.startButton.setEnabled(False)
@@ -195,6 +220,8 @@ class Analyzer(QtGui.QMainWindow):
         self.setupWorker()
         self.setupSampler()
 
+        self.RUNNING = True
+
     @pyqtSlot()
     def onStop(self):
         self.ui.startButton.setEnabled(True)
@@ -204,8 +231,10 @@ class Analyzer(QtGui.QMainWindow):
         self.sampler.WORKING = False
         self.sampler = None
 
-        # self.workerThread.exit(0)
-        # self.worker = None
+        self.workerThread.exit(0)
+        self.worker = None
+
+        self.RUNNING = False
 
     @pyqtSlot(int)
     def onMode(self, index):

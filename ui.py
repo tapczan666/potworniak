@@ -48,15 +48,15 @@ class Interface(object):
         self.plotLayout_2 = QtGui.QVBoxLayout(self.plotTab_2)
         self.plotTabs.addTab(self.plotTab_2, "HF")
 
-        self.plotTab_3 = QtGui.QWidget()
-        self.plotTab_3.setObjectName(_fromUtf8("plotTab_3"))
-        self.plotLayout_3 = QtGui.QVBoxLayout(self.plotTab_3)
-        self.plotTabs.addTab(self.plotTab_3, "RTSA")
-
-        self.plotTab_4 = QtGui.QWidget()
-        self.plotTab_4.setObjectName(_fromUtf8("plotTab_4"))
-        self.plotLayout_4 = QtGui.QVBoxLayout(self.plotTab_4)
-        self.plotTabs.addTab(self.plotTab_4, "IQ")
+        # self.plotTab_3 = QtGui.QWidget()
+        # self.plotTab_3.setObjectName(_fromUtf8("plotTab_3"))
+        # self.plotLayout_3 = QtGui.QVBoxLayout(self.plotTab_3)
+        # self.plotTabs.addTab(self.plotTab_3, "RTSA")
+        #
+        # self.plotTab_4 = QtGui.QWidget()
+        # self.plotTab_4.setObjectName(_fromUtf8("plotTab_4"))
+        # self.plotLayout_4 = QtGui.QVBoxLayout(self.plotTab_4)
+        # self.plotTabs.addTab(self.plotTab_4, "IQ")
 
     ### FREQ SETTINGS LAYOUT ###
         self.freqBox = QtGui.QGroupBox(self.centralWidget)
