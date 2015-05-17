@@ -24,6 +24,7 @@ class Analyzer(QtGui.QMainWindow):
         self.HOLD = False
         self.AVERAGE = False
         self.PEAK = False
+        self.SAVE = [False, False, False]
 
         ### VARIABLES ###
         self.step = 1.8e6
@@ -42,6 +43,8 @@ class Analyzer(QtGui.QMainWindow):
         self.markerText = [None, None, None, None]
         self.deltaIndex = None
         self.deltaValue = None
+        self.saveCurves = [None, None, None]
+        self.penColors = ['g', 'c', 'm']
 
         self.ui = Interface()
         self.ui.setupUi(self, self.step, self.ref)
@@ -69,6 +72,9 @@ class Analyzer(QtGui.QMainWindow):
         self.ui.avgCheck.stateChanged.connect(self.onAvg)
         self.ui.avgEdit.valueChanged.connect(self.onAvgEdit)
         self.ui.peakCheck.stateChanged.connect(self.onPeak)
+        self.ui.traceButton_1.clicked.connect(self.onSave_1)
+        self.ui.traceButton_2.clicked.connect(self.onSave_2)
+        self.ui.traceButton_3.clicked.connect(self.onSave_3)
         self.ui.waterfallCheck.stateChanged.connect(self.onWaterfall)
 
 ### PLOT FUNCTIONS ###
@@ -159,6 +165,8 @@ class Analyzer(QtGui.QMainWindow):
         self.holdData = None
         self.avgArray = None
         self.avgCounter = 0
+        self.saveCurves = [None, None, None]
+
         if self.RUNNING:
             self.sampler.freqs = self.freqs
             self.sampler.BREAK = True
@@ -181,6 +189,8 @@ class Analyzer(QtGui.QMainWindow):
         self.holdData = None
         self.avgArray = None
         self.avgCounter = 0
+        self.saveCurves = [None, None, None]
+
         if self.nfft < 200:
             self.numSamples = 256
         else:
@@ -261,6 +271,19 @@ class Analyzer(QtGui.QMainWindow):
                 self.peakIndex = np.argmax(yData)
                 self.peak.setIndex(self.peakIndex)
                 self.peakText.setText("Peak:\nf=%0.1f MHz\nP=%0.1f dBm" % (self.xData[self.peakIndex], yData[self.peakIndex]))
+
+            for i in range(len(self.SAVE)):
+                if self.SAVE[i]:
+                    if self.saveCurves[i] is None:
+                        self.saveCurves[i] = self.plot.plot(pen=self.penColors[i])
+                        self.plot.addItem(self.saveCurves[i])
+                        self.saveCurves[i].setData(self.xData, yData)
+
+                    else:
+                        self.plot.removeItem(self.saveCurves[i])
+                        self.saveCurves[i] = None
+
+                    self.SAVE[i] = False
 
             if self.WATERFALL:
                 self.waterfallUpdate(self.xData, yData)
@@ -536,6 +559,21 @@ class Analyzer(QtGui.QMainWindow):
             self.plot.removeItem(self.peak)
             self.peak.deleteLater()
             self.peak = None
+
+    @QtCore.pyqtSlot()
+    def onSave_1(self):
+        self.SAVE[0] = True
+        self.ui.traceButton_1.setDown(True)
+
+    @QtCore.pyqtSlot()
+    def onSave_2(self):
+        self.SAVE[1] = True
+        self.ui.traceButton_2.setDown(True)
+
+    @QtCore.pyqtSlot()
+    def onSave_3(self):
+        self.SAVE[2] = True
+        self.ui.traceButton_3.setDown(True)
 
     @pyqtSlot(object)
     def onError(self, errorMsg):
