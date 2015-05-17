@@ -19,6 +19,9 @@ class Analyzer(QtGui.QMainWindow):
         self.RUNNING = False
         self.HF = False
         self.WATERFALL = False
+        self.MARKERS = [False, False, False, False]
+        self.DELTA = False
+        self.HOLD = False
 
         ### VARIABLES ###
         self.step = 1.8e6
@@ -31,6 +34,12 @@ class Analyzer(QtGui.QMainWindow):
         self.sliceLength = int(np.floor(self.length*(self.step/self.sampRate)))
 
         self.waterfallHistorySize = 100
+        self.markers = [None, None, None, None]
+        self.markerIndex = [None, None, None, None]
+        self.markerValue = [None, None, None, None]
+        self.markerText = [None, None, None, None]
+        self.deltaIndex = None
+        self.deltaValue = None
 
         self.ui = Interface()
         self.ui.setupUi(self, self.step, self.ref)
@@ -50,6 +59,11 @@ class Analyzer(QtGui.QMainWindow):
         self.ui.centerEdit.valueChanged.connect(self.onCenter)
         self.ui.spanEdit.valueChanged.connect(self.onSpan)
         self.ui.refEdit.valueChanged.connect(self.onRef)
+        self.ui.markerCheck_1.stateChanged.connect(self.onMarker_1)
+        self.ui.markerEdit_1.valueChanged.connect(self.onMarkerEdit_1)
+        self.ui.deltaCheck.stateChanged.connect(self.onDelta)
+        self.ui.deltaEdit.valueChanged.connect(self.onDeltaEdit)
+        self.ui.holdCheck.stateChanged.connect(self.onHold)
         self.ui.waterfallCheck.stateChanged.connect(self.onWaterfall)
 
 ### PLOT FUNCTIONS ###
@@ -134,6 +148,10 @@ class Analyzer(QtGui.QMainWindow):
 
     def updateFreqs(self):
         self.freqs = np.arange(self.startFreq+self.step/2, self.stopFreq+self.step/2, self.step)
+        self.markerIndex = [None, None, None, None]
+        self.deltaIndex = None
+        self.peakIndex = None
+        self.holdData = None
         if self.RUNNING:
             self.sampler.freqs = self.freqs
             self.sampler.BREAK = True
@@ -147,10 +165,13 @@ class Analyzer(QtGui.QMainWindow):
         self.ui.stopEdit.setValue(self.stopFreq)
         self.ui.centerEdit.setValue(self.center)
         self.ui.spanEdit.setValue(self.span)
+
+
         
     def updateRbw(self):
         self.markerIndex = [None, None, None, None]
         self.deltaIndex = None
+        self.holdData = None
         if self.nfft < 200:
             self.numSamples = 256
         else:
@@ -182,8 +203,33 @@ class Analyzer(QtGui.QMainWindow):
             self.xData = np.concatenate((self.xData[:index*self.sliceLength], xTemp, self.xData[(index+1)*self.sliceLength:]))
             self.yData = np.concatenate((self.yData[:index*self.sliceLength], yTemp, self.yData[(index+1)*self.sliceLength:]))
 
+
         self.curve.setData(self.xData, self.yData)
         if len(self.xData) == self.sliceLength*len(self.freqs):
+            for i in range(len(self.MARKERS)):
+                if self.MARKERS[i]:
+                    if self.markerIndex[i] == None:
+                        index = np.argmin(np.abs(self.xData-self.markerValue[i]))
+                        self.markerIndex[i] = index
+                    self.markers[i].setIndex(self.markerIndex[i])
+                    self.markerText[i].setText("Mk1:\nf=%0.1f MHz\nP=%0.1f dBm" % (self.xData[self.markerIndex[i]], self.yData[self.markerIndex[i]]))
+
+            if self.DELTA:
+                if self.deltaIndex == None:
+                    index = np.argmin(np.abs(self.xData-self.deltaValue))
+                    self.deltaIndex = index
+                self.delta.setIndex(self.deltaIndex)
+                dx = self.xData[self.deltaIndex] - self.xData[self.markerIndex[0]]
+                dy = self.yData[self.deltaIndex] - self.yData[self.markerIndex[0]]
+                self.deltaText.setText("Delta:\ndf=%0.1f MHz\ndP=%0.1f dB" % (dx, dy))
+
+            if self.HOLD:
+                if self.holdData is None:
+                    self.holdData = self.yData
+                else:
+                    self.holdData = np.amax([self.holdData, self.yData], axis=0)
+                self.holdCurve.setData(self.xData, self.holdData)
+
             if self.WATERFALL:
                 self.waterfallUpdate(self.xData, self.yData)
 
@@ -240,6 +286,7 @@ class Analyzer(QtGui.QMainWindow):
         self.ui.stopButton.setEnabled(True)
         self.ui.statusbar.setVisible(False)
         self.ui.statusbar.clearMessage()
+        self.ui.settingsTabs.setEnabled(True)
 
         self.setupWorker()
         self.setupSampler()
@@ -250,6 +297,7 @@ class Analyzer(QtGui.QMainWindow):
     def onStop(self):
         self.ui.startButton.setEnabled(True)
         self.ui.stopButton.setEnabled(False)
+        self.ui.settingsTabs.setEnabled(False)
 
         self.samplerThread.exit(0)
         self.sampler.WORKING = False
@@ -320,24 +368,119 @@ class Analyzer(QtGui.QMainWindow):
         self.yData = []
         self.waterfallImg = None
 
-    @QtCore.pyqtSlot(float)
+    @pyqtSlot(float)
     def onCenter(self,center):
         self.center = center
         self.startFreq = self.center - self.span/2
         self.stopFreq = self.center + self.span/2
         self.updateFreqs()
 
-    @QtCore.pyqtSlot(float)
+    @pyqtSlot(float)
     def onSpan(self,span):
         self.span = span
         self.startFreq = self.center - self.span/2
         self.stopFreq = self.center + self.span/2
         self.updateFreqs()
 
-    @QtCore.pyqtSlot(int)
+    @pyqtSlot(int)
     def onRef(self, ref):
         self.ref = ref
         self.plot.setYRange(self.ref-100, self.ref)
+        if self.WATERFALL:
+            self.waterfallHistogram.setHistogramRange(self.ref-100, self.ref)
+
+    # Markers
+    @pyqtSlot(int)
+    def onMarker_1(self, state):
+        if state == 2:
+            self.MARKERS[0] = True
+            self.ui.deltaCheck.setEnabled(True)
+            self.ui.markerEdit_1.setEnabled(True)
+            self.ui.markerEdit_1.setRange(1, 1280)
+            self.ui.markerEdit_1.setValue(self.center/1e6)
+            self.markerValue[0] = self.ui.markerEdit_1.value()
+
+            self.marker_1 = pg.CurvePoint(self.curve)
+            self.plot.addItem(self.marker_1)
+            self.markers[0] = self.marker_1
+            self.markerArrow_1 = pg.ArrowItem(angle=270)
+            self.markerArrow_1.setParentItem(self.marker_1)
+            self.markerText_1 = pg.TextItem("Mk1", anchor=(0.5, 1.5))
+            self.markerText_1.setParentItem(self.marker_1)
+            self.markerText[0] = self.markerText_1
+
+        elif state == 0:
+            self.MARKERS[0] = False
+            self.markerIndex[0] = None
+            self.markerValue[0] = None
+            self.markerText[0] = None
+            self.ui.markerEdit_1.setDisabled(True)
+            self.ui.deltaCheck.setDisabled(True)
+            self.plot.removeItem(self.marker_1)
+            self.marker_1.deleteLater()
+            self.marker_1 = None
+
+    @pyqtSlot(float)
+    def onMarkerEdit_1(self, freq):
+        self.markerIndex[0] = None
+        self.markerValue[0] = freq
+
+    @pyqtSlot(int)
+    def onDelta(self, state):
+        if state == 2:
+            self.DELTA = True
+            self.ui.deltaEdit.setEnabled(True)
+            self.ui.deltaEdit.setRange(1, 1280)
+            self.ui.deltaEdit.setValue(self.center/1e6)
+            self.deltaValue = self.ui.deltaEdit.value()
+
+            self.delta = pg.CurvePoint(self.curve)
+            self.plot.addItem(self.delta)
+            self.deltaArrow = pg.ArrowItem(angle=270)
+            self.deltaArrow.setParentItem(self.delta)
+            self.deltaText = pg.TextItem("Delta:", anchor=(0.5, 1.5))
+            self.deltaText.setParentItem(self.delta)
+
+        elif state == 0:
+            self.DELTA = False
+            self.ui.deltaEdit.setDisabled(True)
+
+    @pyqtSlot(float)
+    def onDeltaEdit(self, freq):
+        self.deltaIndex = None
+        self.deltaValue = freq
+
+    @pyqtSlot(int)
+    def onHold(self, state):
+        if state == 2:
+            self.HOLD = True
+            self.holdCurve = self.plot.plot(pen='r')
+            self.plot.addItem(self.holdCurve)
+            self.holdData = None
+        elif state == 0:
+            self.HOLD = False
+            self.holdData = None
+            self.plot.removeItem(self.holdCurve)
+
+    @pyqtSlot(int)
+    def onAvg(self, state):
+        if state == 2:
+            self.AVERAGE = True
+            self.num_avg = self.ui.avgEdit.value()
+        elif state == 0:
+            self.AVERAGE = False
+            self.num_avg = 1
+            self.avg = []
+
+    @pyqtSlot(int)
+    def onPeak(self, state):
+        if state == 2:
+            self.PEAK = True
+            self.ui.peakMarker.attach(self.ui.plot)
+        elif state == 0:
+            self.PEAK = False
+            self.ui.peakMarker.detach()
+            self.peak_search = ()
 
     @pyqtSlot(object)
     def onError(self, errorMsg):

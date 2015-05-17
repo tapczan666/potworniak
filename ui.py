@@ -227,6 +227,7 @@ class Interface(object):
     ### Settings tabs ###
         self.settingsTabs = QtGui.QTabWidget(self.settingsBox)
         self.settingsVLayout_1.addWidget(self.settingsTabs)
+        self.settingsTabs.setEnabled(False)
 
         # Misc. options
         self.tab_1 = QtGui.QWidget()
@@ -325,8 +326,8 @@ class Interface(object):
         self.markerLabel_1 = QtGui.QLabel(self.settingsBox)
         self.markerLabel_1.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
         self.markerLayout.addWidget(self.markerLabel_1, 0,0)
-        self.markerCheck = QtGui.QCheckBox(self.settingsBox)
-        self.markerLayout.addWidget(self.markerCheck, 0,1)
+        self.markerCheck_1 = QtGui.QCheckBox(self.settingsBox)
+        self.markerLayout.addWidget(self.markerCheck_1, 0,1)
         self.markerEdit_1 = QtGui.QDoubleSpinBox(self.settingsBox)
         self.markerEdit_1.setDecimals(2)
         self.markerEdit_1.setKeyboardTracking(False)
