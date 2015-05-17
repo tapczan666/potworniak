@@ -22,6 +22,7 @@ class Analyzer(QtGui.QMainWindow):
         self.MARKERS = [False, False, False, False]
         self.DELTA = False
         self.HOLD = False
+        self.AVERAGE = False
 
         ### VARIABLES ###
         self.step = 1.8e6
@@ -64,6 +65,8 @@ class Analyzer(QtGui.QMainWindow):
         self.ui.deltaCheck.stateChanged.connect(self.onDelta)
         self.ui.deltaEdit.valueChanged.connect(self.onDeltaEdit)
         self.ui.holdCheck.stateChanged.connect(self.onHold)
+        self.ui.avgCheck.stateChanged.connect(self.onAvg)
+        self.ui.avgEdit.valueChanged.connect(self.onAvgEdit)
         self.ui.waterfallCheck.stateChanged.connect(self.onWaterfall)
 
 ### PLOT FUNCTIONS ###
@@ -152,6 +155,8 @@ class Analyzer(QtGui.QMainWindow):
         self.deltaIndex = None
         self.peakIndex = None
         self.holdData = None
+        self.avgArray = None
+        self.avgCounter = 0
         if self.RUNNING:
             self.sampler.freqs = self.freqs
             self.sampler.BREAK = True
@@ -172,6 +177,8 @@ class Analyzer(QtGui.QMainWindow):
         self.markerIndex = [None, None, None, None]
         self.deltaIndex = None
         self.holdData = None
+        self.avgArray = None
+        self.avgCounter = 0
         if self.nfft < 200:
             self.numSamples = 256
         else:
@@ -203,8 +210,8 @@ class Analyzer(QtGui.QMainWindow):
             self.xData = np.concatenate((self.xData[:index*self.sliceLength], xTemp, self.xData[(index+1)*self.sliceLength:]))
             self.yData = np.concatenate((self.yData[:index*self.sliceLength], yTemp, self.yData[(index+1)*self.sliceLength:]))
 
+        yData = self.yData
 
-        self.curve.setData(self.xData, self.yData)
         if len(self.xData) == self.sliceLength*len(self.freqs):
             for i in range(len(self.MARKERS)):
                 if self.MARKERS[i]:
@@ -230,8 +237,28 @@ class Analyzer(QtGui.QMainWindow):
                     self.holdData = np.amax([self.holdData, self.yData], axis=0)
                 self.holdCurve.setData(self.xData, self.holdData)
 
+            if self.AVERAGE:
+                if self.avgCounter == 0:
+                    if self.avgArray is None:
+                        self.avgArray = np.array([self.yData])
+
+                    elif self.avgArray.shape[0] < self.numAvg:
+                        self.avgArray = np.append(self.avgArray, np.array([self.yData]), axis=0)
+
+                    else:
+                        self.avgArray = np.roll(self.avgArray, -1, axis=0)
+                        self.avgArray[-1] = self.yData
+                    self.avgData = np.average(self.avgArray, axis=0)
+                    #self.curve.setData(self.xData, yData)
+                    self.avgCounter = len(self.freqs)
+                else:
+                    self.avgCounter -= 1
+                yData = self.avgData
+
             if self.WATERFALL:
-                self.waterfallUpdate(self.xData, self.yData)
+                self.waterfallUpdate(self.xData, yData)
+
+        self.curve.setData(self.xData, yData)
 
     def waterfallUpdate(self, xData, yData):
         if self.waterfallImg is None:
@@ -450,6 +477,7 @@ class Analyzer(QtGui.QMainWindow):
         self.deltaIndex = None
         self.deltaValue = freq
 
+    # MAX HOLD
     @pyqtSlot(int)
     def onHold(self, state):
         if state == 2:
@@ -462,16 +490,26 @@ class Analyzer(QtGui.QMainWindow):
             self.holdData = None
             self.plot.removeItem(self.holdCurve)
 
+    # AVERAGE
     @pyqtSlot(int)
     def onAvg(self, state):
         if state == 2:
             self.AVERAGE = True
-            self.num_avg = self.ui.avgEdit.value()
+            self.numAvg = self.ui.avgEdit.value()
+            self.avgArray = None
+            self.avgCounter = 0
         elif state == 0:
             self.AVERAGE = False
-            self.num_avg = 1
+            self.numAvg = None
             self.avg = []
 
+    @pyqtSlot(float)
+    def onAvgEdit(self, num):
+        self.numAvg = num
+        self.avgArray = None
+        self.avgCounter = 0
+
+    # PEAK
     @pyqtSlot(int)
     def onPeak(self, state):
         if state == 2:
