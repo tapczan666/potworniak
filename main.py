@@ -77,6 +77,9 @@ class Analyzer(QtGui.QMainWindow):
         self.ui.traceButton_3.clicked.connect(self.onSave_3)
         self.ui.waterfallCheck.stateChanged.connect(self.onWaterfall)
 
+        self.usb = USBController()
+        #self.usb.usbError.connect(self.onError)
+
 ### PLOT FUNCTIONS ###
     def createPlot(self):
         self.plot = pg.PlotWidget()
@@ -313,17 +316,13 @@ class Analyzer(QtGui.QMainWindow):
         self.samplerThread.started.connect(self.sampler.sampling)
         self.sampler.samplerError.connect(self.onError)
         self.sampler.dataAcquired.connect(self.worker.work)
-        #self.ui.gainSlider.valueChanged[int].connect(self.setGain)
-        #self.ui.gainSlider.valueChanged[int].connect(self.sampler.changeGain, QtCore.Qt.QueuedConnection)
         self.samplerThread.start(QtCore.QThread.NormalPriority)
 
     def setupWorker(self):
         self.workerThread = QtCore.QThread(self)
         self.worker = Worker(self.nfft, self.length, self.sliceLength, self.sampRate)
         self.worker.moveToThread(self.workerThread)
-        #self.workerThread.started.connect(self.worker.working)
         self.worker.dataReady.connect(self.plotUpdate)
-        #self.worker.abort.connect(self.onAbort)
         self.workerThread.start(QtCore.QThread.NormalPriority)
 
 

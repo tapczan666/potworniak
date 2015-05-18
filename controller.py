@@ -1,8 +1,11 @@
 __author__ = 'maciek'
 
 from pylibftdi import BitBangDevice
+from PyQt4 import QtCore
 
 class USBController():
+    usbError = QtCore.pyqtSignal(object)
+
     def __init__(self):
         try:
             self.bb = BitBangDevice()
@@ -13,8 +16,9 @@ class USBController():
             self.switch_2 = 1
             print self.state
         except:
-            raise Exception("Failed to initialize USB controller")
             print "Failed to initialize USB controller. Please reconnect."
+            errorMsg = "Failed to initialize USB controller. Please reconnect."
+            #self.usbError.emit(errorMsg)
 
 
     def set_att(self, att):
