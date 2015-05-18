@@ -49,18 +49,18 @@ class Sampler(QtCore.QObject):
                 if self.BREAK:
                     break
                 else:
-                    center_freq = self.freqs[i]
+                    centerFreq = self.freqs[i]
                     #print "frequency: " + str(center_freq/1e6) + "MHz"
-                    if center_freq != prev:
+                    if centerFreq != prev:
                         try:
-                            self.sdr.set_center_freq(center_freq)
+                            self.sdr.set_center_freq(centerFreq)
                         except:
                             self.WORKING = False
                             print "Device failure while setting center frequency"
                             self.errorMsg = "Device failure while setting center frequency"
                             self.samplerError.emit(self.errorMsg)
                             break
-                        prev = center_freq
+                        prev = centerFreq
                     else:
                         pass
 
@@ -68,18 +68,20 @@ class Sampler(QtCore.QObject):
                     try:
                         x = self.sdr.read_samples(2048)
                         data = self.sdr.read_samples(numSamples)
+
                     except:
                         self.WORKING = False
                         print "Device failure while getting samples"
                         self.errorMsg = "Device failure while getting samples"
                         self.samplerError.emit(self.errorMsg)
                         break
+
                     if self.MEASURE:
                         self.offset = np.mean(data)
-                    #print center_freq
+
                     counter += 1
-                    self.dataAcquired.emit([i, center_freq, data])
-            #print str(counter) + " samples in " + str(time.time()-start) + " seconds"
+                    self.dataAcquired.emit([i, centerFreq, data])
+
         if self.errorMsg is not None:
             self.samplerError.emit(self.errorMsg)
         if self.sdr is not None:

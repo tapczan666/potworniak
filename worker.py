@@ -2,7 +2,7 @@ __author__ = 'maciek'
 
 from PyQt4 import QtCore
 from pylab import mlab
-from matplotlib.mlab import psd
+from matplotlib.mlab import psd, stride_windows
 import numpy as np
 import time
 
@@ -35,7 +35,8 @@ class Worker(QtCore.QObject):
         #print len(samples)
         samples = samples - offset
         #samples = samples - np.mean(samples)
-        power, freqs = psd(samples, NFFT=nfft, pad_to=length, noverlap=self.nfft/2, Fs=sampRate/1e6, detrend=mlab.detrend_mean, window=mlab.window_hanning, sides = 'twosided')
+        power, freqs = psd(samples, NFFT=nfft, pad_to=length, noverlap=nfft/2, Fs=sampRate/1e6, detrend=mlab.detrend_mean, window=mlab.window_hanning, sides = 'twosided')
+        self.welch(samples, nfft, nfft/2)
         power = np.reshape(power, len(power))
         freqs = freqs + center_freq/1e6
         power = power[trash/2:-trash/2]
@@ -44,3 +45,19 @@ class Worker(QtCore.QObject):
         power = power - self.correction
         out = [index, power, freqs]
         self.dataReady.emit(out)
+
+    def welch(self, x, nfft, noverlap):
+        #window = mlab.window_hanning(nfft)
+
+        # Split input vector into slices
+        temp = stride_windows(x, nfft, noverlap, axis=1)
+        print temp.shape
+        # Apply window function
+
+        # Calculate FFT
+
+        # Correct for loss of power due to windowing
+
+        # Average the power spectra
+
+
