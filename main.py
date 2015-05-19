@@ -98,8 +98,8 @@ class Analyzer(QtGui.QMainWindow):
             self.ui.plotLayout_2.addWidget(self.plot)
         self.plot.showGrid(x=True, y=True)
         self.plot.setMouseEnabled(x=False, y=False)
-        self.plot.setYRange(self.ref-100, self.ref)
-        self.plot.setXRange(self.startFreq/1e6, self.stopFreq/1e6)
+        self.plot.setYRange(self.ref-100, self.ref, padding=0)
+        self.plot.setXRange(self.startFreq/1e6, self.stopFreq/1e6, padding=0)
         self.curve = self.plot.plot(pen='y')
 
         self.span = self.stopFreq - self.startFreq
@@ -176,7 +176,7 @@ class Analyzer(QtGui.QMainWindow):
         self.xData = []
         self.yData = []
         self.waterfallImg = None
-        self.plot.setXRange(self.startFreq/1e6, self.stopFreq/1e6)
+        self.plot.setXRange(self.startFreq/1e6, self.stopFreq/1e6, padding=0)
 
         self.ui.startEdit.setValue(self.startFreq)
         self.ui.stopEdit.setValue(self.stopFreq)
