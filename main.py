@@ -83,16 +83,16 @@ class Analyzer(QtGui.QMainWindow):
     def createPlot(self):
         self.plot = pg.PlotWidget()
         if self.HF == False:
-            self.ui.startEdit.setRange(30e6, 1280e6-self.step)
-            self.ui.stopEdit.setRange(30e6+self.step, 1280e6)
-            self.ui.centerEdit.setRange(30e6+self.step/2, 1280e6-self.step/2)
+            self.ui.startEdit.setRange(30, 1280-self.step/1e6)
+            self.ui.stopEdit.setRange(30+self.step/1e6, 1280)
+            self.ui.centerEdit.setRange(30+self.step/2e6, 1280-self.step/2e6)
             self.startFreq = 80e6
             self.stopFreq = 100e6
             self.ui.plotLayout.addWidget(self.plot)
         elif self.HF:
-            self.ui.startEdit.setRange(1e6, 30e6-self.step)
-            self.ui.stopEdit.setRange(1e6+self.step, 30e6)
-            self.ui.centerEdit.setRange(1e6+self.step/2, 30e6-self.step/2)
+            self.ui.startEdit.setRange(1, 30-self.step/1e6)
+            self.ui.stopEdit.setRange(1+self.step/1e6, 30)
+            self.ui.centerEdit.setRange(1+self.step/2e6, 30-self.step/2e6)
             self.startFreq = 1e6
             self.stopFreq = 30e6
             self.ui.plotLayout_2.addWidget(self.plot)
@@ -113,7 +113,7 @@ class Analyzer(QtGui.QMainWindow):
         self.posLabel = pg.TextItem(anchor=(0,1))
         self.plot.addItem(self.posLabel)
         self.mouseProxy = pg.SignalProxy(self.plot.scene().sigMouseMoved,
-                                         rateLimit=60, slot=self.mouseMoved)
+                                         rateLimit=20, slot=self.mouseMoved)
 
         self.updateFreqs()
 
@@ -178,10 +178,10 @@ class Analyzer(QtGui.QMainWindow):
         self.waterfallImg = None
         self.plot.setXRange(self.startFreq/1e6, self.stopFreq/1e6, padding=0)
 
-        self.ui.startEdit.setValue(self.startFreq)
-        self.ui.stopEdit.setValue(self.stopFreq)
-        self.ui.centerEdit.setValue(self.center)
-        self.ui.spanEdit.setValue(self.span)
+        self.ui.startEdit.setValue(self.startFreq/1e6)
+        self.ui.stopEdit.setValue(self.stopFreq/1e6)
+        self.ui.centerEdit.setValue(self.center/1e6)
+        self.ui.spanEdit.setValue(self.span/1e6)
 
 
         
@@ -391,7 +391,7 @@ class Analyzer(QtGui.QMainWindow):
 
     @pyqtSlot(float)
     def onStartFreq(self, value):
-        self.startFreq = value
+        self.startFreq = value*1e6
         if self.startFreq > self.stopFreq - self.step:
             self.stopFreq = self.startFreq + self.step
         self.span = self.stopFreq - self.startFreq
@@ -400,7 +400,7 @@ class Analyzer(QtGui.QMainWindow):
 
     @pyqtSlot(float)
     def onStopFreq(self, value):
-        self.stopFreq = value
+        self.stopFreq = value*1e6
         if self.stopFreq < self.startFreq + self.step:
             self.startFreq = self.stopFreq - self.step
         self.span = self.stopFreq - self.startFreq
@@ -424,15 +424,15 @@ class Analyzer(QtGui.QMainWindow):
         self.waterfallImg = None
 
     @pyqtSlot(float)
-    def onCenter(self,center):
-        self.center = center
+    def onCenter(self, center):
+        self.center = center*1e6
         self.startFreq = self.center - self.span/2
         self.stopFreq = self.center + self.span/2
         self.updateFreqs()
 
     @pyqtSlot(float)
     def onSpan(self,span):
-        self.span = span
+        self.span = span*1e6
         self.startFreq = self.center - self.span/2
         self.stopFreq = self.center + self.span/2
         self.updateFreqs()
