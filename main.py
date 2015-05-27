@@ -33,9 +33,6 @@ class Analyzer(QtGui.QMainWindow):
         self.gain = 0
         self.sampRate = 2.4e6
 
-        self.length = 2048
-        self.sliceLength = int(np.floor(self.length*(self.step/self.sampRate)))
-
         self.waterfallHistorySize = 100
         self.markers = [None, None, None, None]
         self.markerIndex = [None, None, None, None]
@@ -49,8 +46,11 @@ class Analyzer(QtGui.QMainWindow):
         self.ui = Interface()
         self.ui.setupUi(self, self.step, self.ref)
 
+        self.nwelch = 15
         self.nfft = self.ui.rbwEdit.itemData(self.ui.rbwEdit.currentIndex()).toInt()[0]
-        self.numSamples = self.nfft*2
+        self.numSamples = self.nfft*(1+self.nwelch)/2
+        self.length = self.nfft
+        self.sliceLength = int(np.floor(self.length*(self.step/self.sampRate)))
 
         self.createPlot()
 
@@ -193,10 +193,9 @@ class Analyzer(QtGui.QMainWindow):
         self.avgCounter = 0
         self.saveCurves = [None, None, None]
 
-        if self.nfft < 200:
+        self.numSamples = self.nfft*(1+self.nwelch)/2
+        if self.numSamples < 200:
             self.numSamples = 256
-        else:
-            self.numSamples = self.nfft*2
             
         if self.span >=50e6:
             threshold = 200
@@ -289,7 +288,7 @@ class Analyzer(QtGui.QMainWindow):
 
             if self.WATERFALL:
                 self.waterfallUpdate(self.xData, yData)
-
+        #print len(yData)
         self.curve.setData(self.xData, yData)
 
     def waterfallUpdate(self, xData, yData):
@@ -319,7 +318,7 @@ class Analyzer(QtGui.QMainWindow):
 
     def setupWorker(self):
         self.workerThread = QtCore.QThread(self)
-        self.worker = Worker(self.nfft, self.length, self.sliceLength, self.sampRate)
+        self.worker = Worker(self.nfft, self.length, self.sliceLength, self.sampRate, self.nwelch)
         self.worker.moveToThread(self.workerThread)
         self.worker.dataReady.connect(self.plotUpdate)
         self.workerThread.start(QtCore.QThread.NormalPriority)
@@ -422,6 +421,8 @@ class Analyzer(QtGui.QMainWindow):
         self.xData = []
         self.yData = []
         self.waterfallImg = None
+        print self.numSamples
+        print self.nfft
 
     @pyqtSlot(float)
     def onCenter(self, center):

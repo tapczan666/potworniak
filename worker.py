@@ -10,9 +10,10 @@ class Worker(QtCore.QObject):
     abort = QtCore.pyqtSignal()
     dataReady = QtCore.pyqtSignal(object)
 
-    def __init__(self, nfft, length, sliceLength, sampRate, parent=None):
+    def __init__(self, nfft, length, sliceLength, sampRate, nwelch, parent=None):
         super(Worker, self).__init__(parent)
         self.sampRate = sampRate
+        self.nwelch = nwelch
         self.nfft = nfft
         self.length = length
         self.sliceLength = sliceLength
@@ -26,11 +27,14 @@ class Worker(QtCore.QObject):
         sliceLength = self.sliceLength
         sampRate = self.sampRate
         offset = self.offset
+
         index = data[0]
         center_freq = data[1]
         samples = data[2]
-        if len(samples)>2*length:
-            samples = samples[:2*length]
+
+        if len(samples)>nfft*(1+self.nwelch)/2:
+            samples = samples[:nfft*(1+self.nwelch)/2]
+
         trash = length - sliceLength
         #print len(samples)
         samples = samples - offset
